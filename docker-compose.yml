@@ -1,0 +1,27 @@
+###
+# docker-compose.yml for testing and experimentation
+###
+
+###
+# Unidata Docker Tomcat
+###
+
+unidata-tomcat:
+  image: unidata/tomcat
+  ports:
+    - "80:8080"
+  container_name: unidata-tomcat
+  volumes:
+    - ./logs/:/usr/local/tomcat/logs/
+
+###
+# Generic Tomcat
+###
+
+tomcat:
+  image: tomcat:jre8
+  ports:
+    - "80:8080"
+  container_name: unidata-tomcat
+  volumes:
+    - ./logs/:/usr/local/tomcat/logs/
