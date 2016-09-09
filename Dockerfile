@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y openjdk-8-jdk
 RUN groupadd -r tomcat && \
 	useradd -g tomcat -d ${CATALINA_HOME} -s /sbin/nologin \
   -c "Tomcat user" tomcat
-`
+
 ###
 # Eliminate default web applications
 ###
