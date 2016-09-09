@@ -27,7 +27,7 @@ RUN rm -rf ${CATALINA_HOME}/webapps/* && \
 
 ###
 # Change CATALINA_HOME ownership to tomcat user and tomcat group
-# Restrict permission on conf and log directories
+# Restrict permissions on conf and log directories
 ###
 
 RUN chown -R tomcat:tomcat ${CATALINA_HOME} && \
@@ -41,7 +41,8 @@ WORKDIR ${CATALINA_HOME}/lib
 ###
 
 RUN jar xf catalina.jar org/apache/catalina/util/ServerInfo.properties
-RUN sed -i 's/server.info=.*/server.info=Apache Tomcat/g' org/apache/catalina/util/ServerInfo.properties
+RUN sed -i 's/server.info=.*/server.info=Apache Tomcat/g' \
+    org/apache/catalina/util/ServerInfo.properties
 RUN jar uf catalina.jar org/apache/catalina/util/ServerInfo.properties
 RUN rm -rf org
 
@@ -51,7 +52,7 @@ RUN sed -i 's/<Connector/<Connector server="Apache"/g' \
     ${CATALINA_HOME}/conf/server.xml
 
 ###
-# Capture stack traces to non-existant file
+# Capture stack traces to non-existent file
 ###
 
 COPY error-page.xml.snippet ${CATALINA_HOME}
@@ -61,7 +62,7 @@ RUN sed -i '$d' ${CATALINA_HOME}/conf/web.xml && \
     rm error-page.xml.snippet
 
 ###
-# Setting restrictive umask container wide
+# Setting restrictive umask container-wide
 ###
 
 RUN echo "session optional pam_umask.so" >> /etc/pam.d/common-session
