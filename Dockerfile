@@ -25,15 +25,6 @@ RUN groupadd -r tomcat && \
 RUN rm -rf ${CATALINA_HOME}/webapps/* && \
     rm -rf ${CATALINA_HOME}/server/webapps/* 
 
-###
-# Change CATALINA_HOME ownership to tomcat user and tomcat group
-# Restrict permissions on conf and log directories
-###
-
-RUN chown -R tomcat:tomcat ${CATALINA_HOME} && \
-    chmod 400 ${CATALINA_HOME}/conf/* && \
-    chmod 300 ${CATALINA_HOME}/logs/.
-
 WORKDIR ${CATALINA_HOME}/lib
 
 ###
@@ -67,6 +58,15 @@ RUN sed -i '$d' ${CATALINA_HOME}/conf/web.xml && \
 
 RUN echo "session optional pam_umask.so" >> /etc/pam.d/common-session
 RUN sed -i 's/UMASK.*022/UMASK           007/g' /etc/login.defs
+
+###
+# Change CATALINA_HOME ownership to tomcat user and tomcat group
+# Restrict permissions on conf and log directories
+###
+
+RUN chown -R tomcat:tomcat ${CATALINA_HOME} && \
+    chmod 400 ${CATALINA_HOME}/conf/* && \
+    chmod 300 ${CATALINA_HOME}/logs/.
 
 USER tomcat
 
