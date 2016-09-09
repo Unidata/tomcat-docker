@@ -4,9 +4,9 @@
 
 This repository contains files necessary to build and run a security hardened Tomcat Docker container, based off of the canonical Tomcat base image.
 
-## Security Hardening Measure
+## Security Hardening Measures
 
-This Tomcat container was security hardened according to (OWASP recommendations)[https://www.owasp.org/index.php/Securing_tomcat]. Specifically,
+This Tomcat container was security hardened according to [OWASP recommendations](https://www.owasp.org/index.php/Securing_tomcat). Specifically,
 
 - Eliminated default Tomcat web applications
 - Run Tomcat with unprivileged user `tomcat`
