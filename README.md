@@ -15,18 +15,6 @@ This Tomcat container was security hardened according to [OWASP recommendations]
 - Stack traces are not returned to user
 - Container-wide `umask` of `007`
 
-## Pulling the Container
+## Versions
 
-To pull the Unidata Tomcat container from the Docker Hub registry:
-
-      docker pull unidata/tomcat:latest
-
-It is best to be on a fast network when pulling containers as they can be quite large.
-
-## Building the Container
-
-Alternatively, rather than pulling the container you can clone this repository and build the Unidata Tomcat Docker container:
-
-    docker build  -t unidata/tomcat:latest .
-
-It is best to be on a fast network when building containers as there can be many intermediate layers to download.
+- `unidata/tomcat:8` based off of [canonical Tomcat 8 container](https://hub.docker.com/r/unidata/tomcat-docker/) (`tomcat:jre8`).
