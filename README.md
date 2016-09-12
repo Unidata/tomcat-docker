@@ -1,7 +1,5 @@
 # Unidata Tomcat Docker
 
-[![Travis Status](https://travis-ci.org/Unidata/tomcat-docker.svg?branch=master)](https://travis-ci.org/Unidata/tomcat-docker)
-
 This repository contains files necessary to build and run a security hardened Tomcat Docker container, based off of the canonical [Tomcat base image](https://hub.docker.com/_/tomcat/). The Unidata Tomcat Docker images associated with this repository are [available on Docker Hub](https://hub.docker.com/r/unidata/tomcat-docker/).
 
 ## Security Hardening Measures
