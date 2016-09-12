@@ -17,4 +17,4 @@ This Tomcat container was security hardened according to [OWASP recommendations]
 
 ## Versions
 
-- `unidata/tomcat:8` based off of [canonical Tomcat 8 container](https://hub.docker.com/_/tomcat/) (`tomcat:jre8`).
+- `unidata/tomcat-docker:8` based off of [canonical Tomcat 8 container](https://hub.docker.com/_/tomcat/) (`tomcat:jre8`).
