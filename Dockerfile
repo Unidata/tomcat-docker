@@ -8,8 +8,7 @@ FROM tomcat:jre8
 # Usual maintenance
 ###
 
-RUN apt-get update && apt-get install -y openjdk-8-jdk
-
+RUN apt-get update && apt-get install -y zip
 ###
 # Tomcat User
 ###
@@ -31,10 +30,12 @@ WORKDIR ${CATALINA_HOME}/lib
 # Obscuring server info
 ###
 
-RUN jar xf catalina.jar org/apache/catalina/util/ServerInfo.properties
+RUN mkdir -p org/apache/catalina/util/ && \
+    unzip -j catalina.jar org/apache/catalina/util/ServerInfo.properties \
+    -d org/apache/catalina/util/
 RUN sed -i 's/server.info=.*/server.info=Apache Tomcat/g' \
     org/apache/catalina/util/ServerInfo.properties
-RUN jar uf catalina.jar org/apache/catalina/util/ServerInfo.properties
+RUN zip -ur catalina.jar org/apache/catalina/util/ServerInfo.properties
 RUN rm -rf org
 
 WORKDIR ${CATALINA_HOME}
