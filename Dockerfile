@@ -61,15 +61,6 @@ RUN echo "session optional pam_umask.so" >> /etc/pam.d/common-session
 RUN sed -i 's/UMASK.*022/UMASK           007/g' /etc/login.defs
 
 ###
-# Change CATALINA_HOME ownership to tomcat user and tomcat group
-# Restrict permissions on conf and log directories
-###
-
-RUN chown -R tomcat:tomcat ${CATALINA_HOME} && \
-    chmod 400 ${CATALINA_HOME}/conf/* && \
-    chmod 300 ${CATALINA_HOME}/logs/.
-
-###
 # gosu is a non-optimal way to deal with the mismatches between Unix user and
 # group IDs inside versus outside the container resulting in permission
 # headaches when writing to directory outside the container.
