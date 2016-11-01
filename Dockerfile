@@ -40,7 +40,7 @@ RUN rm -rf org
 
 WORKDIR ${CATALINA_HOME}
 
-RUN sed -i 's/<Connector/<Connector server="Apache"/g' \
+RUN sed -i 's/<Connector/<Connector server="Apache" secure="true"/g' \
     ${CATALINA_HOME}/conf/server.xml
 
 ###
