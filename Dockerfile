@@ -44,6 +44,13 @@ RUN sed -i 's/<Connector/<Connector server="Apache"/g' \
     ${CATALINA_HOME}/conf/server.xml
 
 ###
+# Add HttpOnly in cookie
+###
+
+RUN sed -i 's/<Context/<Context usehttponly="true"/g' \
+    ${CATALINA_HOME}/conf/context.xml
+
+###
 # Capture stack traces to non-existent file
 ###
 
