@@ -15,6 +15,7 @@ This Tomcat container was security hardened according to [OWASP recommendations]
 - Files in `CATALINA_HOME/conf` are read only (`400`) by user `tomcat` (via `entrypoint.sh`)
 - Server version information is obscured to user
 - Stack traces are not returned to user
+- HttpOnly in cookie
 - Container-wide `umask` of `007`
 
 ## Versions
