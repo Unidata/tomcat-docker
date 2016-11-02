@@ -44,6 +44,16 @@ RUN sed -i 's/<Connector/<Connector server="Apache" secure="true"/g' \
     ${CATALINA_HOME}/conf/server.xml
 
 ###
+# Ugly, embarrassing, fragile solution to adding the digest attribute until we
+# get XSLT or the equivalent figured out. True for other XML manipulations
+# herein.
+# https://github.com/Unidata/tomcat-docker/issues/27
+##
+
+RUN sed -i 's/resourceName/digest="SHA" resourceName/g' \
+    ${CATALINA_HOME}/conf/server.xml
+
+###
 # Capture stack traces to non-existent file
 ###
 
