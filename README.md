@@ -18,6 +18,23 @@ This Tomcat container was security hardened according to [OWASP recommendations]
 - Add secure flag in cookie
 - Container-wide `umask` of `007`
 
+### Digested Passwords
+
+This container has a `UserDatabaseRealm`, `Realm` element in `server.xml` with a default `digest` algorithm of `SHA`. This modification is an improvement over the clear text password default that comes with the parent container (`tomcat:jre8`). Passwords defined in `tomcat-users.xml` must use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `SHA` digest algorithm:
+
+```bash
+docker run tomcat  /usr/local/tomcat/bin/digest.sh -a "SHA" mysupersecretpassword
+```
+
+This command will yield something like:
+
+```bash
+mysupersecretpassword:94e334bc71163a69f2e984e73741f610e083a8e11764ee3e396f6935c3911f49$1$a5530e17501f83a60286f6363a8647a277c9cfdb
+```
+The hash after the `:` is what you will use for the `password` attribute in `tomcat-users.xml`.
+
+More information about this topic is available in the [Tomcat documentaion](https://tomcat.apache.org/tomcat-8.0-doc/realm-howto.html#Digested_Passwords).
+
 ## Versions
 
 - `unidata/tomcat-docker:8` based off of [canonical Tomcat 8 container](https://hub.docker.com/_/tomcat/) (`tomcat:jre8`).
