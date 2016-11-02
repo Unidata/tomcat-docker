@@ -9,6 +9,7 @@ FROM tomcat:jre8
 ###
 
 RUN apt-get update && apt-get install -y zip
+
 ###
 # Tomcat User
 ###
@@ -16,6 +17,14 @@ RUN apt-get update && apt-get install -y zip
 RUN groupadd -r tomcat && \
 	useradd -g tomcat -d ${CATALINA_HOME} -s /sbin/nologin \
   -c "Tomcat user" tomcat
+
+###
+# Tomcat start script
+###
+
+COPY start-tomcat.sh ${CATALINA_HOME}/bin
+
+RUN chmod +x ${CATALINA_HOME}/bin/start-tomcat.sh
 
 ###
 # Eliminate default web applications
@@ -106,4 +115,4 @@ ENTRYPOINT ["/entrypoint.sh"]
 # Start container
 ###
 
-CMD ["catalina.sh", "run"]
+CMD ["start-tomcat.sh"]
