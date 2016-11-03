@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-if [ "$1" = 'catalina.sh' ]; then
+if [ "$1" = 'start-tomcat.sh' ]; then
 
     ###
     # Change CATALINA_HOME ownership to tomcat user and tomcat group
