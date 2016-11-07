@@ -1,7 +1,11 @@
 #!/bin/bash
 set -e
 
-if [ "$1" = 'start-tomcat.sh' ]; then
+# preferable to fire up Tomcat via start-tomcat.sh which will start Tomcat with
+# security manager, but inheriting containers can also start Tomcat via
+# catalina.sh
+
+if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
 
     ###
     # Change CATALINA_HOME ownership to tomcat user and tomcat group
