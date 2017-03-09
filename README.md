@@ -34,7 +34,7 @@ mysupersecretpassword:94e334bc71163a69f2e984e73741f610e083a8e11764ee3e396f6935c3
 ```
 The hash after the `:` is what you will use for the `password` attribute in `tomcat-users.xml`.
 
-More information about this topic is available in the [Tomcat documentaion](https://tomcat.apache.org/tomcat-8.0-doc/realm-howto.html#Digested_Passwords).
+More information about this topic is available in the [Tomcat documentation](https://tomcat.apache.org/tomcat-8.0-doc/realm-howto.html#Digested_Passwords).
 
 ## Versions
 
