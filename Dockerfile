@@ -1,8 +1,7 @@
 ###
 # Dockerfile for Unidata Tomcat.
 ###
-
-FROM tomcat:jre8
+FROM tomcat:8.0-jre8
 
 ###
 # Usual maintenance
