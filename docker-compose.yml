@@ -10,9 +10,12 @@ unidata-tomcat:
   image: unidata/tomcat-docker:latest
   ports:
     - "80:8080"
-  container_name: unidata-tomcat
+  container_name: unidata-tomcat-test
   volumes:
-    - ./logs/:/usr/local/tomcat/logs/
+  - ./logs/:/usr/local/tomcat/logs/
+  environment:
+    - LOCAL_USER_ID=9876
+    - LOCAL_GROUP_ID=9877
 
 ###
 # Generic Tomcat
