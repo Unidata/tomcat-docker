@@ -88,3 +88,26 @@ unidata-tomcat:
     - /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key
     - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
 ```
+## Configurable Tomcat UID and GID
+
+The problem with mounted Docker volumes and UID/DIG mismatch headaches is best explained here: https://denibertovic.com/posts/handling-permissions-with-docker-volumes/.
+
+This container allows the possibility of controlling the UID/GID of the `tomcat` user inside the container via `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` environment variables. If not set, the default UID/GID is `1000`/`1000`. For example,
+
+
+```bash
+docker run --name tomcat \
+     -e TOMCAT_USER_ID=`id -u` \
+     -e TOMCAT_GROUP_ID=`getent group $USER | cut -d':' -f3` \
+     -v `pwd`/logs:/usr/local/tomcat/logs/ \
+     -v  /path/to/your/webapp:/usr/local/tomcat/webapps \
+     -d -p 8080:8080 unidata/tomcat-docker:latest
+```
+
+where `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` have been configured with the UID/GID of the user running the container. If using `docker-compose`, see `compose.env` to configure the UID/GID of user `tomcat` inside the container. 
+
+This feature enables greater control of file permissions written outside the container via mounted volumes (e.g., files contained within the Tomcat logs directory such as `catalina.out`).
+
+Note that containers that inherit this container and have overridden `entrypoint.sh` will have to take into account user `tomcat` is no longer assumed in the `Dockerfile`. Rather the `tomcat` user is now created within the `entrypoint.sh` and those overriding `entrypoint.sh` should take this fact into account.
+
+Also note that this UID/GID configuration option will not work on operating systems where Docker is not native (e.g., macOS).
