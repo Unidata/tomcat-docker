@@ -5,6 +5,13 @@
 This repository contains files necessary to build and run a security hardened Tomcat Docker container, based off of the canonical [Tomcat base image](https://hub.docker.com/_/tomcat/). The Unidata Tomcat Docker images associated with this repository are [available on Docker Hub](https://hub.docker.com/r/unidata/tomcat-docker/). All default web application have
 been expunged from this container so it will primarily serve a base image for other containers.
 
+## Versions
+
+* `unidata/tomcat-docker:latest` (inherits `tomcat:8.5-jre8`)
+* `unidata/tomcat-docker:8.5` (inherits `tomcat:8.5-jre8`)
+* `unidata/tomcat-docker:8.0` (inherits `tomcat:8.0-jre8`)
+* `unidata/tomcat-docker:8` (deprecated though matches `unidata/tomcat-docker:8.0` for the time being)
+
 ## Security Hardening Measures
 
 This Tomcat container was security hardened according to [OWASP recommendations](https://www.owasp.org/index.php/Securing_tomcat). Specifically,
@@ -21,7 +28,7 @@ This Tomcat container was security hardened according to [OWASP recommendations]
 
 ### Digested Passwords
 
-This container has a `UserDatabaseRealm`, `Realm` element in `server.xml` with a default `digest` algorithm of `SHA`. This modification is an improvement over the clear text password default that comes with the parent container (`tomcat:jre8`). Passwords defined in `tomcat-users.xml` must use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `SHA` digest algorithm:
+This container has a `UserDatabaseRealm`, `Realm` element in `server.xml` with a default `CredentialHandler` algorithm of `SHA`. This modification is an improvement over the clear text password default that comes with the parent container (`tomcat:8.5-jre8`). Passwords defined in `tomcat-users.xml` must use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `SHA` digest algorithm:
 
 ```bash
 docker run tomcat  /usr/local/tomcat/bin/digest.sh -a "SHA" mysupersecretpassword
@@ -34,11 +41,7 @@ mysupersecretpassword:94e334bc71163a69f2e984e73741f610e083a8e11764ee3e396f6935c3
 ```
 The hash after the `:` is what you will use for the `password` attribute in `tomcat-users.xml`.
 
-More information about this topic is available in the [Tomcat documentation](https://tomcat.apache.org/tomcat-8.0-doc/realm-howto.html#Digested_Passwords).
-
-## Versions
-
-- `unidata/tomcat-docker:8` based off of [canonical Tomcat 8 container](https://hub.docker.com/_/tomcat/) (`tomcat:jre8`).
+More information about this topic is available in the [Tomcat documentation](https://tomcat.apache.org/tomcat-8.5-doc/realm-howto.html#Digested_Passwords).
 
 ## HTTP Over SSL
 
