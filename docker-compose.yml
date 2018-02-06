@@ -13,6 +13,8 @@ unidata-tomcat:
   container_name: unidata-tomcat
   volumes:
     - ./logs/:/usr/local/tomcat/logs/
+  env_file:
+    - "compose.env"
 
 ###
 # Generic Tomcat

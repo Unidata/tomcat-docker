@@ -16,12 +16,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
     ###
-    # Tomcat user
-    ###
-    groupadd -r tomcat && \
-    useradd -g tomcat -d ${CATALINA_HOME} -s /sbin/nologin \
-        -c "Tomcat user" tomcat && \
-    ###
     # Eliminate default web applications
     ###
     rm -rf ${CATALINA_HOME}/webapps/* && \
