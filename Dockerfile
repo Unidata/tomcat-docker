@@ -23,15 +23,15 @@ RUN apt-get update && \
     ###
     # Obscuring server info
     ###
-    mkdir -p ${CATALINA_HOME}/lib/org/apache/catalina/util/ && \
-    unzip -j ${CATALINA_HOME}/lib/catalina.jar \
-        org/apache/catalina/util/ServerInfo.properties \
-        -d ${CATALINA_HOME}/lib/org/apache/catalina/util/ && \
+    pushd ${PWD} && cd ${CATALINA_HOME}/lib && \
+    mkdir -p org/apache/catalina/util/ && \
+    unzip -j catalina.jar org/apache/catalina/util/ServerInfo.properties \
+        -d org/apache/catalina/util/ && \
     sed -i 's/server.info=.*/server.info=Apache Tomcat/g' \
-        ${CATALINA_HOME}/lib/org/apache/catalina/util/ServerInfo.properties && \
-    zip -ur ${CATALINA_HOME}/lib/catalina.jar \
-        ${CATALINA_HOME}/lib/org/apache/catalina/util/ServerInfo.properties && \
-    rm -rf ${CATALINA_HOME}/lib/org && \
+        org/apache/catalina/util/ServerInfo.properties && \
+    zip -ur catalina.jar \
+        org/apache/catalina/util/ServerInfo.properties && \
+    rm -rf org && popd \
     sed -i 's/<Connector/<Connector server="Apache" secure="true"/g' \
         ${CATALINA_HOME}/conf/server.xml && \
     ###
