@@ -23,7 +23,7 @@ RUN apt-get update && \
     ###
     # Obscuring server info
     ###
-    pushd ${PWD} && cd ${CATALINA_HOME}/lib && \
+    cd ${CATALINA_HOME}/lib && \
     mkdir -p org/apache/catalina/util/ && \
     unzip -j catalina.jar org/apache/catalina/util/ServerInfo.properties \
         -d org/apache/catalina/util/ && \
@@ -31,7 +31,7 @@ RUN apt-get update && \
         org/apache/catalina/util/ServerInfo.properties && \
     zip -ur catalina.jar \
         org/apache/catalina/util/ServerInfo.properties && \
-    rm -rf org && popd \
+    rm -rf org && cd ${CATALINA_HOME} \
     sed -i 's/<Connector/<Connector server="Apache" secure="true"/g' \
         ${CATALINA_HOME}/conf/server.xml && \
     ###
