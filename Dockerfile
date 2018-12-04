@@ -60,7 +60,7 @@ RUN apt-get update && \
 # Installation instructions copy/pasted from
 # https://github.com/tianon/gosu/blob/master/INSTALL.md
 # minus ca-certificates which we are inheriting from parent container
-ENV GOSU_VERSION 1.10
+ENV GOSU_VERSION 1.11
 
 RUN set -ex; \
     \
@@ -79,7 +79,15 @@ RUN set -ex; \
     \
     # verify the signature
     export GNUPGHOME="$(mktemp -d)"; \
-    gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+    export KEY=B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+    for server in $(shuf -e ha.pool.sks-keyservers.net \
+                            hkp://p80.pool.sks-keyservers.net:80 \
+                            keyserver.ubuntu.com \
+                            hkp://keyserver.ubuntu.com:80 \
+                            keyserver.pgp.com \
+                            pgp.mit.edu) ; do \
+        gpg --batch --keyserver "$server" --recv-keys $KEY && break || : ; \
+    done; \
     gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
     rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
     \
