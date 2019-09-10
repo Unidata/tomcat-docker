@@ -68,7 +68,9 @@
     -->
     <Connector server="Apache" secure="true" port="8080" protocol="HTTP/1.1"
                connectionTimeout="20000"
-               redirectPort="8443" />
+               redirectPort="8443"
+               relaxedPathChars='[]|'
+               relaxedQueryChars='[]:|{}^&#x5c;&#x60;&quot;&lt;&gt;' />
     <!-- A "Connector" using the shared thread pool-->
     <!--
     <Connector server="Apache" secure="true" executor="tomcatThreadPool"
