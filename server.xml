@@ -128,6 +128,19 @@
     <Engine name="Catalina" defaultHost="localhost" jvmRoute="jvm1">
     -->
     <Engine name="Catalina" defaultHost="localhost">
+        <!--
+             Handle X-Forwarded-Proto and X-Forwarded-For http header when
+             behind a well configured proxy.
+
+             * X-Forwarded-Proto is to preserve the original proto (httpS)
+               from the client connecting URL.
+
+             * X-Forwarded-For (set by default by the Valve) is to preserve the
+               original client IP in the logs.  Otherwise the nearest proxy IP
+               will be logged, much less useful for auditing.
+        -->
+        <Valve className="org.apache.catalina.valves.RemoteIpValve"
+            protocolHeader="X-Forwarded-Proto" />
 
       <!--For clustering, please take a look at documentation at:
           /docs/cluster-howto.html  (simple how to)
