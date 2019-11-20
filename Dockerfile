@@ -98,12 +98,9 @@ RUN set -ex; \
     apt-get purge -y --auto-remove $fetchDeps
 
 ###
-# Capture stack traces to non-existent file
+# Security enhanced web.xml
 ###
-COPY error-page.xml.snippet ${CATALINA_HOME}
-RUN sed -i '$d' ${CATALINA_HOME}/conf/web.xml && \
-    cat error-page.xml.snippet >> ${CATALINA_HOME}/conf/web.xml && \
-    rm error-page.xml.snippet
+COPY web.xml ${CATALINA_HOME}/conf/
 
 ###
 # Tomcat start script
