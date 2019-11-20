@@ -7,10 +7,8 @@ been expunged from this container so it will primarily serve a base image for ot
 
 ## Versions
 
-* `unidata/tomcat-docker:latest` (inherits `tomcat:8.5-jre8`)
-* `unidata/tomcat-docker:8.5` (inherits `tomcat:8.5-jre8`)
-* `unidata/tomcat-docker:8.0` (inherits `tomcat:8.0-jre8`)
-* `unidata/tomcat-docker:8` (deprecated though matches `unidata/tomcat-docker:8.0` for the time being)
+* `unidata/tomcat-docker:latest` (inherits `tomcat:8.5-jdk8-openjdk`)
+* `unidata/tomcat-docker:8.5` (inherits `tomcat:8.5-jdk8-openjdk`)
 
 ## Security Hardening Measures
 
