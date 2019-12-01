@@ -1,0 +1,175 @@
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
+#+OPTIONS: broken-links:nil c:nil creator:nil d:(not "LOGBOOK") date:t e:t
+#+OPTIONS: email:nil f:t inline:t num:t p:nil pri:nil prop:nil stat:t tags:t
+#+OPTIONS: tasks:t tex:t timestamp:t title:t toc:t todo:t |:t
+#+OPTIONS: auto-id:t
+
+#+TITLE: readme
+#+DATE: <2019-11-30 Sat>
+#+AUTHOR: Julien Chastang
+#+EMAIL: chastang@ucar.edu
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+#+EXCLUDE_TAGS: noexport
+#+CREATOR: Emacs 26.3 (Org mode 9.2.1)
+
+* Setup                                                            :noexport:
+  :PROPERTIES:
+  :CUSTOM_ID: h-4B1C9588
+  :END:
+
+#+BEGIN_SRC emacs-lisp :results silent
+  (setq org-confirm-babel-evaluate nil)
+#+END_SRC
+
+Publishing
+
+#+BEGIN_SRC emacs-lisp :results silent
+  (setq base-dir (concat (projectile-project-root) ".org"))
+
+  (setq pub-dir (projectile-project-root))
+
+  (setq org-publish-project-alist
+        `(("orgfiles"
+            :base-directory ,base-dir
+            :recursive t
+            :base-extension "org"
+            :publishing-directory ,pub-dir
+            :publishing-function org-gfm-publish-to-gfm)))
+#+END_SRC
+
+* Unidata Tomcat Docker
+  :PROPERTIES:
+  :CUSTOM_ID: h-CBB85014
+  :END:
+
+#+BEGIN_EXPORT HTML
+<a href="https://travis-ci.org/Unidata/tomcat-docker"><img src="https://travis-ci.org/Unidata/tomcat-docker.svg?branch=master" alt="Travis Status"> </a>
+#+END_EXPORT
+
+This repository contains files necessary to build and run a security hardened Tomcat Docker container, based off of the canonical [[https://hub.docker.com/_/tomcat/][Tomcat base image]]. The Unidata Tomcat Docker images associated with this repository are [[https://hub.docker.com/r/unidata/tomcat-docker/][available on Docker Hub]]. All default web application have been expunged from this container so it will primarily serve a base image for other containers.
+
+** Versions
+   :PROPERTIES:
+   :CUSTOM_ID: h-E01B4A0F
+   :END:
+
+- ~unidata/tomcat-docker:latest~ (inherits ~tomcat:8.5-jdk8-openjdk~)
+- ~unidata/tomcat-docker:8.5~ (inherits ~tomcat:8.5-jdk8-openjdk~)
+
+** Security Hardening Measures
+   :PROPERTIES:
+   :CUSTOM_ID: h-C9AD76A0
+   :END:
+
+This Tomcat container was security hardened according to [[https://www.owasp.org/index.php/Securing_tomcat][OWASP recommendations]]. Specifically,
+
+- Eliminated default Tomcat web applications
+- Run Tomcat with unprivileged user ~tomcat~ (via ~entrypoint.sh~)
+- Start Tomcat via Tomcat Security Manager (via ~entrypoint.sh~)
+- All files in ~CATALINA_HOME~ are owned by user ~tomcat~ (via
+  ~entrypoint.sh~)
+- Files in ~CATALINA_HOME/conf~ are read only (~400~) by user ~tomcat~
+  (via ~entrypoint.sh~)
+- Server version information is obscured to user
+- Stack traces are not returned to user
+- Add secure flag in cookie
+- Container-wide ~umask~ of ~007~
+
+*** Digested Passwords
+    :PROPERTIES:
+    :CUSTOM_ID: h-2C497D80
+    :END:
+
+This container has a ~UserDatabaseRealm~, ~Realm~ element in ~server.xml~ with a default ~CredentialHandler~ algorithm of ~SHA~. This modification is an improvement over the clear text password default that comes with the parent container (~tomcat:8.5-jre8~). Passwords defined in ~tomcat-users.xml~ must use digested passwords in the ~password~ attributes of the ~user~ elements. Generating a digested password is simple. Here is an example for the ~SHA~ digest algorithm:
+
+#+BEGIN_SRC sh
+  docker run tomcat  /usr/local/tomcat/bin/digest.sh -a "SHA" mysupersecretpassword
+#+END_SRC
+
+This command will yield something like:
+
+#+BEGIN_SRC sh
+  mysupersecretpassword:94e334bc71163a69f2e984e73741f610e083a8e11764ee3e396f6935c3911f49$1$a5530e17501f83a60286f6363a8647a277c9cfdb
+#+END_SRC
+
+The hash after the ~:~ is what you will use for the ~password~ attribute in ~tomcat-users.xml~.
+
+More information about this topic is available in the  [[https://tomcat.apache.org/tomcat-8.5-doc/realm-howto.html#Digested_Passwords][Tomcat documentation]].
+
+** HTTP Over SSL
+   :PROPERTIES:
+   :CUSTOM_ID: h-E0520F81
+   :END:
+
+This Tomcat container can support HTTP over SSL. For example, generate a self-signed certificate with ~openssl~ (or better yet, obtain a real certificate from a certificate authority):
+
+#+BEGIN_SRC sh
+  openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 -subj \
+      "/C=US/ST=Colorado/L=Boulder/O=Unidata/CN=tomcat.example.com" -keyout \
+      ./ssl.key -out ./ssl.crt
+#+END_SRC
+
+Then augment the ~server.xml~ from this repository with this additional XML snippet for [[https://tomcat.apache.org/tomcat-8.0-doc/ssl-howto.html][Tomcat SSL capability]]:
+
+#+BEGIN_SRC xml
+  <Connector port="8443"
+         maxThreads="150"
+         enableLookups="false"
+         disableUploadTimeout="true"
+         acceptCount="100"
+         scheme="https"
+         secure="true"
+         SSLEnabled="true"
+         SSLCertificateFile="${catalina.base}/conf/ssl.crt"
+         SSLCertificateKeyFile="${catalina.base}/conf/ssl.key" />
+#+END_SRC
+
+Mount over the existing ~server.xml~ and add the SSL certificate and
+private key with:
+
+#+BEGIN_SRC sh
+  docker run -it -d  -p 80:8080 -p 443:8443 \
+      -v /path/to/server.xml:/usr/local/tomcat/conf/server.xml \
+      -v /path/to/ssl.crt:/usr/local/tomcat/conf/ssl.crt \
+      -v /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key \
+      unidata/tomcat-docker:8
+#+END_SRC
+
+or if using ~docker-compose~ the ~docker-compose.yml~ will look like:
+
+#+BEGIN_SRC yaml
+  unidata-tomcat:
+    image: unidata/tomcat-docker:8
+    ports:
+      - "80:8080"
+      - "443:8443"
+    volumes:
+      - /path/to/ssl.crt:/usr/local/tomcat/conf/ssl.crt
+      - /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key
+      - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
+#+END_SRC
+
+** Configurable Tomcat UID and GID
+   :PROPERTIES:
+   :CUSTOM_ID: h-688F3648
+   :END:
+
+The problem with mounted Docker volumes and UID/DIG mismatch headaches is best explained here: https://denibertovic.com/posts/handling-permissions-with-docker-volumes/.
+
+This container allows the possibility of controlling the UID/GID of the ~tomcat~ user inside the container via ~TOMCAT_USER_ID~ and ~TOMCAT_GROUP_ID~ environment variables. If not set, the default UID/GID is ~1000/1000~. For example,
+
+#+BEGIN_SRC sh
+  docker run --name tomcat \
+       -e TOMCAT_USER_ID=`id -u` \
+       -e TOMCAT_GROUP_ID=`getent group $USER | cut -d':' -f3` \
+       -v `pwd`/logs:/usr/local/tomcat/logs/ \
+       -v  /path/to/your/webapp:/usr/local/tomcat/webapps \
+       -d -p 8080:8080 unidata/tomcat-docker:latest
+#+END_SRC
+
+where ~TOMCAT_USER_ID~ and ~TOMCAT_GROUP_ID~ have been configured with the UID/GID of the user running the container. If using ~docker-compose~, see ~compose.env~ to configure the UID/GID of user ~tomcat~ inside the container.
+
+This feature enables greater control of file permissions written outside the container via mounted volumes (e.g., files contained within the Tomcat logs directory such as ~catalina.out~).
+
+Note that containers that inherit this container and have overridden ~entrypoint.sh~ will have to take into account user ~tomcat~ is no longer assumed in the ~Dockerfile~. Rather the ~tomcat~ user is now created within the ~entrypoint.sh~ and those overriding ~entrypoint.sh~ should take this fact into account.  Also note that this UID/GID configuration option will not work on operating systems where Docker is not native (e.g., macOS).
