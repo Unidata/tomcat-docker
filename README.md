@@ -2,7 +2,9 @@
   - [Versions](#h-E01B4A0F)
   - [Security Hardening Measures](#h-C9AD76A0)
     - [Digested Passwords](#h-2C497D80)
-  - [HTTP Over SSL](#h-E0520F81)
+  - [HTTPS](#h-E0520F81)
+    - [Self-signed Certificates](#h-AA504A54)
+    - [Certificate from CA](#h-0B755481)
   - [Configurable Tomcat UID and GID](#h-688F3648)
 
 
@@ -64,7 +66,14 @@ More information about this topic is available in the [Tomcat documentation](htt
 
 <a id="h-E0520F81"></a>
 
-## HTTP Over SSL
+## HTTPS
+
+This Tomcat container can support HTTPS for either self-signed certificates which can be useful for experimentation or certificates from a CA for a production server. For a complete treatment on this topic, see <https://tomcat.apache.org/tomcat-8.5-doc/ssl-howto.html>.
+
+
+<a id="h-AA504A54"></a>
+
+### Self-signed Certificates
 
 This Tomcat container can support HTTP over SSL. For example, generate a self-signed certificate with `openssl` (or better yet, obtain a real certificate from a certificate authority):
 
@@ -110,6 +119,76 @@ unidata-tomcat:
   volumes:
     - /path/to/ssl.crt:/usr/local/tomcat/conf/ssl.crt
     - /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key
+    - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
+```
+
+
+<a id="h-0B755481"></a>
+
+### Certificate from CA
+
+First, obtain a certificate from a certificate authority (CA). This process will yield a `.key` and `.crt` file. To meet enhanced security guidelines you, will want serve a certificate with the intermediate certificates present in the `ssl.crt` file. For Tomcat to serve the certificate chain, you have to put your `.key` and `.crt` (containing the intermediate certificates) in a Java keystore. First create the keystore:
+
+```sh
+keytool -genkey -alias mydomain.com -keyalg RSA -keystore keystore.jks
+```
+
+Next put the `.key` and `.crt` in a `.p12` file:
+
+```sh
+openssl pkcs12 -export -in ssl.crt. -inkey ssl.key -out ssl.p12 -name \
+    mydomain.com
+```
+
+Then add the `.p12` file to the keystore:
+
+```
+keytool -importkeystore -destkeystore keystore.jks -srckeystore ssl.p12 \
+    -srcstoretype PKCS12s
+```
+
+You'll then refer to that keystore in your `server.xml`:
+
+```xml
+<Connector port="8443"
+           protocol="org.apache.coyote.http11.Http11NioProtocol"
+           clientAuth="false"
+           sslProtocol="TLSv1.2, TLSv1.3"
+           ciphers="ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ECDHE-ECDSA-AES256-GCM-SHA384,ECDHE-RSA-AES256-GCM-SHA384,ECDHE-ECDSA-CHACHA20-POLY1305,ECDHE-RSA-CHACHA20-POLY1305,DHE-RSA-AES128-GCM-SHA256,DHE-RSA-AES256-GCM-SHA384"
+           maxThreads="150"
+           enableLookups="false"
+           disableUploadTimeout="true"
+           acceptCount="100"
+           scheme="https"
+           secure="true"
+           SSLEnabled="true"
+           keystoreFile="${catalina.base}/conf/keystore.jks"
+           keyAlias="mydomain.com"
+           keystorePass="xxxx"
+           />
+```
+
+Note there are a few differences with the `Connector` described for the self-signed certificate above. These additions are made according to enhanced security guidelines.
+
+Mount over the existing `server.xml` and add the SSL certificate and private key with:
+
+```sh
+docker run -it -d  -p 80:8080 -p 443:8443 \
+    -v /path/to/server.xml:/usr/local/tomcat/conf/server.xml \
+    -v /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks \
+    unidata/tomcat-docker:8
+```
+
+or if using `docker-compose` the `docker-compose.yml` will look like:
+
+```yaml
+unidata-tomcat:
+  image: unidata/tomcat-docker:8
+  ports:
+    - "80:8080"
+    - "443:8443"
+  volumes:
+    - /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks
     - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
 ```
 
