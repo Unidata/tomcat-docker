@@ -41,10 +41,8 @@ RUN apt-get update && \
     # https://github.com/Unidata/tomcat-docker/issues/27
     # https://stackoverflow.com/questions/32178822/tomcat-understanding-credentialhandler
     ##
-
     sed -i 's/resourceName="UserDatabase"\/>/resourceName="UserDatabase"><CredentialHandler className="org.apache.catalina.realm.MessageDigestCredentialHandler" algorithm="SHA" \/><\/Realm>/g' \
         ${CATALINA_HOME}/conf/server.xml && \
-
     ###
     # Setting restrictive umask container-wide
     ###
