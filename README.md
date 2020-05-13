@@ -1,6 +1,7 @@
 - [Unidata Tomcat Docker](#h-CBB85014)
   - [Versions](#h-E01B4A0F)
   - [Security Hardening Measures](#h-C9AD76A0)
+    - [web.xml Enhancements](#h-1BF7025D)
     - [Digested Passwords](#h-2C497D80)
   - [HTTPS](#h-E0520F81)
     - [Self-signed Certificates](#h-AA504A54)
@@ -38,9 +39,20 @@ This Tomcat container was security hardened according to [OWASP recommendations]
 -   All files in `CATALINA_HOME` are owned by user `tomcat` (via `entrypoint.sh`)
 -   Files in `CATALINA_HOME/conf` are read only (`400`) by user `tomcat` (via `entrypoint.sh`)
 -   Server version information is obscured to user
--   Stack traces are not returned to user
 -   Add secure flag in cookie
 -   Container-wide `umask` of `007`
+
+
+<a id="h-1BF7025D"></a>
+
+### web.xml Enhancements
+
+In addition, the following changes have been made to [web.xml](./web.xml) from the out-of-the-box version:
+
+-   Added `SAMEORIGIN` anti-clickjacking option
+-   HTTP header security filter (`httpHeaderSecurity`) uncommented/enabled
+-   Cross-origin resource sharing (CORS) filtering (`CorsFilter`) added/enabled
+-   Stack traces are not returned to user through `error-page` element.
 
 
 <a id="h-2C497D80"></a>
