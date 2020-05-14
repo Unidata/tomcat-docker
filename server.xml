@@ -19,7 +19,7 @@
      define subcomponents such as "Valves" at this level.
      Documentation at /docs/config/server.html
  -->
-<Server port="8005" shutdown="SHUTDOWN">
+<Server port="-1" shutdown="SHUTDOWN">
   <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
   <!-- Security listener. Documentation at /docs/config/listeners.html
   <Listener className="org.apache.catalina.security.SecurityListener" />
@@ -38,7 +38,7 @@
     <!-- Editable user database that can also be used by
          UserDatabaseRealm to authenticate users
     -->
-    <Resource name="UserDatabase" auth="Container"
+    <Resource digest="SHA" name="UserDatabase" auth="Container"
               type="org.apache.catalina.UserDatabase"
               description="User database that can be updated and saved"
               factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
@@ -115,8 +115,12 @@
     -->
 
     <!-- Define an AJP 1.3 Connector on port 8009 -->
-    <Connector server="Apache" secure="true" port="8009" protocol="AJP/1.3" redirectPort="8443" />
-
+    <!--
+    <Connector server="Apache" secure="true" protocol="AJP/1.3"
+               address="::1"
+               port="8009"
+               redirectPort="8443" />
+    -->
 
     <!-- An Engine represents the entry point (within Catalina) that processes
          every request.  The Engine implementation for Tomcat stand alone
@@ -144,7 +148,7 @@
              that are performed against this UserDatabase are immediately
              available for use by the Realm.  -->
         <Realm className="org.apache.catalina.realm.UserDatabaseRealm"
-               resourceName="UserDatabase"><CredentialHandler className="org.apache.catalina.realm.MessageDigestCredentialHandler" algorithm="SHA" /></Realm>
+               resourceName="UserDatabase"><CredentialHandler className="org.apache.catalina.realm.MessageDigestCredentialHandler" algorithm="sha-512" /></Realm>
       </Realm>
 
       <Host name="localhost"  appBase="webapps"
