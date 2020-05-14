@@ -32,17 +32,6 @@ RUN apt-get update && \
     zip -ur catalina.jar \
         org/apache/catalina/util/ServerInfo.properties && \
     rm -rf org && cd ${CATALINA_HOME} && \
-    sed -i 's/<Connector/<Connector server="Apache" secure="true"/g' \
-        ${CATALINA_HOME}/conf/server.xml && \
-    ###
-    # Ugly, embarrassing, fragile solution to adding the CredentialHandler
-    # element until we get XSLT or the equivalent figured out. True for other
-    # XML manipulations herein.
-    # https://github.com/Unidata/tomcat-docker/issues/27
-    # https://stackoverflow.com/questions/32178822/tomcat-understanding-credentialhandler
-    ##
-    sed -i 's/resourceName="UserDatabase"\/>/resourceName="UserDatabase"><CredentialHandler className="org.apache.catalina.realm.MessageDigestCredentialHandler" algorithm="SHA" \/><\/Realm>/g' \
-        ${CATALINA_HOME}/conf/server.xml && \
     ###
     # Setting restrictive umask container-wide
     ###
@@ -108,6 +97,11 @@ RUN set -eux; \
 # Security enhanced web.xml
 ###
 COPY web.xml ${CATALINA_HOME}/conf/
+
+###
+# Security enhanced server.xml
+###
+COPY server.xml ${CATALINA_HOME}/conf/
 
 ###
 # Tomcat start script

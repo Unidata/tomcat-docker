@@ -2,6 +2,7 @@
   - [Versions](#h-E01B4A0F)
   - [Security Hardening Measures](#h-C9AD76A0)
     - [web.xml Enhancements](#h-1BF7025D)
+    - [server.xml Enhancements](#h-BC90DBB0)
     - [Digested Passwords](#h-2C497D80)
   - [HTTPS](#h-E0520F81)
     - [Self-signed Certificates](#h-AA504A54)
@@ -38,8 +39,6 @@ This Tomcat container was security hardened according to [OWASP recommendations]
 -   Start Tomcat via Tomcat Security Manager (via `entrypoint.sh`)
 -   All files in `CATALINA_HOME` are owned by user `tomcat` (via `entrypoint.sh`)
 -   Files in `CATALINA_HOME/conf` are read only (`400`) by user `tomcat` (via `entrypoint.sh`)
--   Server version information is obscured to user
--   Add secure flag in cookie
 -   Container-wide `umask` of `007`
 
 
@@ -47,7 +46,7 @@ This Tomcat container was security hardened according to [OWASP recommendations]
 
 ### web.xml Enhancements
 
-In addition, the following changes have been made to [web.xml](./web.xml) from the out-of-the-box version:
+The following changes have been made to [web.xml](./web.xml) from the out-of-the-box version:
 
 -   Added `SAMEORIGIN` anti-clickjacking option
 -   HTTP header security filter (`httpHeaderSecurity`) uncommented/enabled
@@ -55,14 +54,28 @@ In addition, the following changes have been made to [web.xml](./web.xml) from t
 -   Stack traces are not returned to user through `error-page` element.
 
 
+<a id="h-BC90DBB0"></a>
+
+### server.xml Enhancements
+
+The following changes have been made to [server.xml](./server.xml) from the out-of-the-box version:
+
+-   Server version information is obscured to user via `server` attribute for all `Connector` elements
+-   `secure` attribute set to `true` for all `Connector` elements
+-   Shutdown port disabled
+-   Digested passwords. See next section.
+
+The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes. This change may not be optimal for security, but must be done [to accommodate DAP requests](https://github.com/Unidata/thredds-docker/issues/209) which THREDDS and RAMADDA must perform.
+
+
 <a id="h-2C497D80"></a>
 
 ### Digested Passwords
 
-This container has a `UserDatabaseRealm`, `Realm` element in `server.xml` with a default `CredentialHandler` algorithm of `SHA`. This modification is an improvement over the clear text password default that comes with the parent container (`tomcat:8.5-jre8`). Passwords defined in `tomcat-users.xml` must use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `SHA` digest algorithm:
+This container has a `UserDatabaseRealm`, `Realm` element in `server.xml` with a default `CredentialHandler` `algorithm` of `sha-512`. This modification is an improvement over the clear text password default that comes with the parent container (`tomcat:8.5-jre8`). Passwords defined in `tomcat-users.xml` must use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `sha-512` digest algorithm:
 
 ```sh
-docker run tomcat  /usr/local/tomcat/bin/digest.sh -a "SHA" mysupersecretpassword
+docker run tomcat  /usr/local/tomcat/bin/digest.sh -a "sha-512" mysupersecretpassword
 ```
 
 This command will yield something like:
