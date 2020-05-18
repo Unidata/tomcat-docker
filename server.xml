@@ -148,7 +148,9 @@
              that are performed against this UserDatabase are immediately
              available for use by the Realm.  -->
         <Realm className="org.apache.catalina.realm.UserDatabaseRealm"
-               resourceName="UserDatabase"><CredentialHandler className="org.apache.catalina.realm.MessageDigestCredentialHandler" algorithm="sha-512" /></Realm>
+                resourceName="UserDatabase">
+                        <CredentialHandler className="org.apache.catalina.realm.MessageDigestCredentialHandler" algorithm="sha-512" />
+        </Realm>
       </Realm>
 
       <Host name="localhost"  appBase="webapps"
