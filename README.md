@@ -7,6 +7,7 @@
   - [HTTPS](#h-E0520F81)
     - [Self-signed Certificates](#h-AA504A54)
     - [Certificate from CA](#h-0B755481)
+    - [Force HTTPS](#h-646F65DF)
   - [Configurable Tomcat UID and GID](#h-688F3648)
 
 
@@ -213,6 +214,26 @@ unidata-tomcat:
   volumes:
     - /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks
     - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
+```
+
+
+<a id="h-646F65DF"></a>
+
+### Force HTTPS
+
+Once you have your certificates in order, make HTTPS mandatory. Add this snippet as the final element in `web.xml`. Mount over the `web.xml` inside the container with this enhanced `web.xml` in the same manner we have been doing to `server.xml` as discussed herein.
+
+```xml
+<!-- Force HTTPS, required for HTTP redirect! -->
+<security-constraint>
+    <web-resource-collection>
+      <web-resource-name>Protected Context</web-resource-name>
+      <url-pattern>/*</url-pattern>
+    </web-resource-collection>
+    <user-data-constraint>
+      <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+    </user-data-constraint>
+</security-constraint>
 ```
 
 
