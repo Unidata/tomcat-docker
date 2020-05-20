@@ -249,6 +249,26 @@ or if using ~docker-compose~ the ~docker-compose.yml~ will look like:
       - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
 #+END_SRC
 
+*** Force HTTPS
+    :PROPERTIES:
+    :CUSTOM_ID: h-646F65DF
+    :END:
+
+Once you have your certificates in order, make HTTPS mandatory. Add this snippet as the final element in  ~web.xml~. Mount over the ~web.xml~ inside the container with this enhanced ~web.xml~ in the same manner we have been doing to ~server.xml~ as discussed herein.
+
+#+BEGIN_SRC xml
+  <!-- Force HTTPS, required for HTTP redirect! -->
+  <security-constraint>
+      <web-resource-collection>
+        <web-resource-name>Protected Context</web-resource-name>
+        <url-pattern>/*</url-pattern>
+      </web-resource-collection>
+      <user-data-constraint>
+        <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+      </user-data-constraint>
+  </security-constraint>
+#+END_SRC
+
 ** Configurable Tomcat UID and GID
    :PROPERTIES:
    :CUSTOM_ID: h-688F3648
