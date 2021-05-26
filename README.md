@@ -27,7 +27,7 @@ This repository contains files necessary to build and run a security hardened To
 
 -   `unidata/tomcat-docker:latest` (inherits `tomcat:8.5-jdk8-openjdk`)
 -   `unidata/tomcat-docker:8.5` (inherits `tomcat:8.5-jdk8-openjdk`)
--   `unidata/tomcat-docker:8.5-jdk11-openjdk` (inherits `tomcat:8.5-jdk8-openjdk`)
+-   `unidata/tomcat-docker:8.5-jdk11-openjdk` (inherits `tomcat:8.5-jdk11-openjdk`)
 
 <a id="h-C9AD76A0"></a>
 
