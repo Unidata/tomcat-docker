@@ -43,10 +43,6 @@ Publishing
   :CUSTOM_ID: h-CBB85014
   :END:
 
-#+BEGIN_EXPORT HTML
-<a href="https://travis-ci.org/Unidata/tomcat-docker"><img src="https://travis-ci.org/Unidata/tomcat-docker.svg?branch=master" alt="Travis Status"> </a>
-#+END_EXPORT
-
 This repository contains files necessary to build and run a security hardened Tomcat Docker container, based off of the canonical [[https://hub.docker.com/_/tomcat/][Tomcat base image]]. The Unidata Tomcat Docker images associated with this repository are [[https://hub.docker.com/r/unidata/tomcat-docker/][available on Docker Hub]]. All default web application have been expunged from this container so it will primarily serve a base image for other containers.
 
 ** Versions
