@@ -151,7 +151,7 @@ unidata-tomcat:
 
 ### Certificate from CA
 
-First, obtain a certificate from a certificate authority (CA). This process will yield a `.key` and `.crt` file. To meet enhanced security guidelines you, will want serve a certificate with the intermediate certificates present in the `ssl.crt` file. For Tomcat to serve the certificate chain, you have to put your `.key` and `.crt` (containing the intermediate certificates) in a Java keystore.
+First, obtain a certificate from a certificate authority (CA). This process will yield a `.key` and `.crt` file. To meet enhanced security guidelines you, will want serve a certificate with the intermediate and root certificates present in the `ssl.crt` file. For Tomcat to serve the certificate chain, you have to put your `.key` and `.crt` (containing the intermediate and root certificates) in a Java keystore. The [Keystore Explorer](https://keystore-explorer.org/) tool is a helpful app to assist you in building a valid certificate chain as well as exploring Java keystores.
 
 First put the `.key` and `.crt` in a `.p12` file:
 
@@ -167,7 +167,14 @@ keytool -importkeystore -destkeystore keystore.jks -srckeystore ssl.p12 \
     -srcstoretype PKCS12
 ```
 
-When prompted for passwords in the two steps above, consider reusing the same password to reduce cognitive load.
+When prompted for passwords in the two steps above, consider reusing the same password to reduce cognitive load. If you see the following message
+
+    Warning: The JKS keystore uses a proprietary format. It is recommended to
+    migrate to PKCS12 which is an industry standard format using "keytool
+    -importkeystore -srckeystore keystore.jks -destkeystore keystore.jks
+    -deststoretype pkcs12".
+
+ignore it.
 
 You'll then refer to that keystore in your `server.xml`:
 
