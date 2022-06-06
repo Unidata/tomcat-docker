@@ -1,14 +1,6 @@
 name: Docker Image CI
 
-# on:
-#   push:
-#     branches: [ master ]
-#   pull_request:
-#     branches: [ master ]
-#
-
-# Leave out specific branches so this same workflow can be used on any branch
-on: [ push, pull_request ]
+on: [ workflow_dispatch, pull_request ]
 
 jobs:
 
@@ -17,12 +9,15 @@ jobs:
     steps:
       # Checkout the commit that triggered the workflow
     - uses: actions/checkout@v2
+
     - name: Build the Docker image
       run: docker build --no-cache -t unidata/tomcat-docker:latest .
+
     - name: Download sample wep app
       run: |
         wget -O $(pwd)/.github/testScripts/sample.war \
         https://tomcat.apache.org/tomcat-8.5-doc/appdev/sample/sample.war
+
     - name: Run the container
       run: |
         docker run --name tomcat \
@@ -33,11 +28,22 @@ jobs:
         -d \
         -p 8080:8080 \
         unidata/tomcat-docker:latest
+
     # Give chance for Tomcat to fire up
     - name: Wait and listen for Tomcat to fire up
-      run: nc -z -w300 127.0.0.1 8080
-    - run: |
+      run: |
+        nc -z -w300 127.0.0.1 8080
         for i in {1..5}; do curl -o /dev/null http://127.0.0.1:8080/sample/index.html && break || \
         (echo sleeping 15... && sleep 15); done
+
     - name: Run test script
       run: ./.github/testScripts/test.sh
+
+    - name: Push to Dockerhub
+      if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == 'true'}}
+      run: |
+        docker logout
+        echo ${{ secrets.registrypwd }} | docker login -u ${{ secrets.registryuser }} --password-stdin
+        docker push ${{ secrets.imagename }}:${{ env.tag }} &&
+        { docker logout && echo "Successfully pushed ${{ secrets.imagename }}:${{ env.tag }}"; } ||
+        { docker logout && echo "Docker push failed" && exit 1; }
