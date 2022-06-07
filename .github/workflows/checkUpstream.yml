@@ -1,0 +1,162 @@
+#######################################################
+# Check dockerhub for updates to the tomcat container #
+#######################################################
+
+name: Check For Upstream Updates
+
+on:
+  schedule:
+    # Once a day at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  createMatrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Create matrix
+        id: set-matrix
+        run: |
+          matrix=$(
+          echo {\
+            $(.github/helperScripts/tomcatVersions.sh)", "\
+            $(.github/helperScripts/jdkVersions.sh)\
+          }\
+          )
+          echo $matrix
+          echo "::set-output name=matrix::$matrix"
+
+  verifyMatrix:
+    runs-on: ubuntu-latest
+    needs: createMatrix
+    steps:
+      - name: Verify matrix
+        run: |
+          matrix='${{ needs.createMatrix.outputs.matrix }}'
+          echo $matrix
+
+  checkUpstream:
+    runs-on: ubuntu-latest
+    needs: createMatrix
+    strategy:
+      matrix: ${{ fromJson(needs.createMatrix.outputs.matrix) }}
+
+    steps:
+
+    - name: Set environment variables
+      run: |
+        echo "scriptsdir=.github/helperScripts" >> $GITHUB_ENV
+
+    - name: Checkout default branch
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Verify repo has been cloned
+      run: |
+        git status
+        git branch -a
+        git remote -v
+
+    - name: Check matrix outputs
+      run: |
+        echo "Tomcat: ${{ matrix.tomcat }} JDK: ${{ matrix.jdk }}"
+
+    - name: Grab the most recent upstream tomcat version
+      run: |
+        upstream=$( ${{ env.scriptsdir }}/dockertags.sh tomcat | ${{ env.scriptsdir }}/findTomcatVersion.sh ${{matrix.tomcat}} ${{ matrix.jdk }})
+        echo $upstream
+        echo "upstream=$upstream" >> $GITHUB_ENV
+
+    - name: Check if up to date
+      run: |
+        echo Latest upstream version: ${{ env.upstream }}
+        echo "Current branches (tomcat: ${{ matrix.tomcat }}, jdk: ${{ matrix.jdk }}):"
+        git branch --list -r "origin/${{ matrix.tomcat }}.*-jdk${{ matrix.jdk }}-openjdk"
+        current=$( git branch --list -r "origin/${{ matrix.tomcat }}.*-jdk${{ matrix.jdk }}-openjdk" | sort -Vr | awk -F "/" '{ print $2 }' | head -n1 )
+        echo Most current branch: $current
+        test "$current" = "${{ env.upstream }}" &&
+        up2date=true || up2date=false
+        echo "Up to date with latest version (${{ env.upstream }})?"
+        echo $up2date
+        echo "up2date=$up2date" >> $GITHUB_ENV
+
+    - name: Already up to date
+      if: ${{ env.up2date == 'true'}}
+      run: |
+        echo "Already up to date with upstream: ${{ env.upstream }}"
+
+    - name: Checkout branch
+      if: ${{ env.up2date != 'true' }}
+      run: |
+        echo "tag=${{ env.upstream }}" >> $GITHUB_ENV
+        echo "New upstream version ${{ env.upstream }}"
+        echo "Creating new branch from origin/latest ..."
+        git checkout -b ${{ env.upstream }} origin/latest
+
+    - name: Update Dockerfile
+      if: ${{ env.up2date != 'true' }}
+      run: |
+        sed -e "s/FROM tomcat:.*/FROM tomcat:${{ env.upstream }}/g" Dockerfile -i
+        grep "FROM tomcat:" Dockerfile
+
+    - name: Build image
+      if: ${{ env.up2date != 'true' }}
+      run: docker build --no-cache -t ${{ secrets.imagename }}:${{ env.tag }} .
+
+    - name: Download sample web app
+      if: ${{ env.up2date != 'true' }}
+      run: |
+        wget -O $(pwd)/.github/testScripts/sample.war \
+        https://tomcat.apache.org/tomcat-8.5-doc/appdev/sample/sample.war
+
+    - name: Run container
+      if: ${{ env.up2date != 'true' }}
+      run: |
+        docker run --name tomcat \
+        -e TOMCAT_USER_ID=$(id -u) \
+        -e TOMCAT_GROUP_ID=$(getent group $USER | cut -d : -f3) \
+        -v $(pwd)/.github/testScripts:/testScripts \
+        -v $(pwd)/.github/testScripts:/usr/local/tomcat/webapps \
+        -d \
+        -p 8080:8080 \
+        unidata/tomcat-docker:latest
+
+    - name: Wait and listen for Tomcat to fire up
+      if: ${{ env.up2date != 'true' }}
+      run: |
+        nc -z -w300 127.0.0.1 8080
+        for i in {1..5}; do curl -o /dev/null http://127.0.0.1:8080/sample/index.html && break || \
+        (echo sleeping 15... && sleep 15); done
+
+    - name: Run test script
+      if: ${{ env.up2date != 'true' }}
+      run: ./.github/testScripts/test.sh
+
+    - name: Push to git
+      if: ${{ env.up2date != 'true' }}
+      run: |
+        git config --global user.name 'Github Actions'
+        git config --global user.email 'respinoza@ucar.edu'
+        git add . && git commit -m "Update to tomcat:${{ env.upstream }}" && \
+        git push origin ${{ env.upstream }}
+        git push origin ${{ env.upstream }}:latest
+
+    - name: Push to dockerhub
+      if: ${{ env.up2date != 'true' }}
+      run: |
+        docker logout
+        echo ${{ secrets.registrypwd }} | docker login -u ${{ secrets.registryuser }} --password-stdin
+        docker push ${{ secrets.imagename }}:${{ env.tag }} && \
+        docker tag ${{ secrets.imagename }}:${{ env.tag }} ${{ secrets.imagename }}:latest && \
+        docker push ${{ secrets.imagename }}:latest && \
+        { docker logout && echo "Successfully pushed ${{ secrets.imagename }}:${{ env.tag }} and ${{ secrets.imagename }}:latest"; } ||
+        { docker logout && echo "Docker push failed" && exit 1; }
