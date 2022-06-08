@@ -144,8 +144,8 @@ jobs:
     - name: Push to git
       if: ${{ env.up2date != 'true' }}
       run: |
-        git config --global user.name 'Github Actions'
-        git config --global user.email 'respinoza@ucar.edu'
+        git config --global user.name $GITHUB_ACTOR
+        git config --global user.email $GITHUB_ACTOR@users.noreply.github.com
         git add . && git commit -m "Update to tomcat:${{ env.upstream }}" && \
         git push origin ${{ env.upstream }}
         git push origin ${{ env.upstream }}:latest
