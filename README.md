@@ -49,9 +49,13 @@ The following changes have been made to [web.xml](./web.xml) from the out-of-the
 
 -   Added `SAMEORIGIN` anti-clickjacking option
 -   HTTP header security filter (`httpHeaderSecurity`) uncommented/enabled
--   Cross-origin resource sharing (CORS) filtering (`CorsFilter`) added/enabled
+-   Cross-origin resource sharing (CORS) filtering (`CorsFilter`) added/enabled (see below to disable)
 -   Stack traces are not returned to user through `error-page` element.
 
+#### CORS
+
+This image enables the [Apache Tomcat CORS filter](https://tomcat.apache.org/tomcat-8.5-doc/config/filter.html#CORS_Filter) by
+default. To disable it (maybe you want to handle CORS uniformly in a proxying webserver?), set environment variable `DISABLE_CORS` to `1`.
 
 <a id="h-BC90DBB0"></a>
 
