@@ -24,6 +24,17 @@ if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
 
     chown -R tomcat:tomcat ${CATALINA_HOME} && chmod 400 ${CATALINA_HOME}/conf/*
     sync
+
+    ###
+    # Deactivate CORS filter in web.xml if DISABLE_CORS=1
+    # Useful if CORS is handled outside of Tomcat (e.g. in a proxying webserver like nginx)
+    ###
+    if [ "$DISABLE_CORS" == "1" ]; then
+      echo "Deactivating Tomcat CORS filter"
+      sed 's/<!-- CORS_START.*/<!-- CORS DEACTIVATED BY DISABLE_CORS -->\n<!--/; s/^.*<!-- CORS_END -->/-->/' \
+        ${CATALINA_HOME}/conf/web.xml
+    fi
+
     exec gosu tomcat "$@"
 fi
 
