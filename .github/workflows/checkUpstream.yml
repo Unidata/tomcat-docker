@@ -100,7 +100,7 @@ jobs:
     - name: Check if a branch on the repo is up to date
       run: |
         current=$(git branch --list -r "origin/*" \
-        | sed 's|^ *||g' \
+        | sed 's|^ *origin/||g' \
         | grep -E -e '${{ matrix.tag.ERE }}' \
         | sort -Vr \
         | head -n 1)
@@ -163,7 +163,7 @@ jobs:
       if: ${{ env.up2date != 'true' }}
       run: |
         ./.github/testScripts/test.sh \
-        && rm $(pwd)/.github/testScripts/{sample.war,sample,actual.html}
+        && rm -rf $(pwd)/.github/testScripts/{sample.war,sample,actual.html}
 
     - name: Push to git
       if: ${{ env.up2date != 'true' }}
@@ -182,16 +182,12 @@ jobs:
         { docker logout && echo "Successfully pushed ${{ secrets.imagename }}:${{ env.tag }} to dockerhub"; } ||
         { docker logout && echo "Docker push failed" && exit 1; }
 
-    - name: Push to latest
+    - name: Create PR targetting latest
       if: ${{ env.up2date != 'true' }}
       run: |
         if [[ "${{ matrix.tag.isLatest }}" == "1" ]];
         then
-          git push origin ${{ env.upstream }}:latest
-          docker logout
-          echo ${{ secrets.registrypwd }} | docker login -u ${{ secrets.registryuser }} --password-stdin
-          docker tag ${{ secrets.imagename }}:${{ env.tag }} ${{ secrets.imagename }}:latest && \
-          docker push ${{ secrets.imagename }}:latest && \
-          { docker logout && echo "Successfully pushed ${{ secrets.imagename }}:latest to dockerhub"; } ||
-          { docker logout && echo "Docker push failed" && exit 1; }
+          gh pr create --title "Update to tomcat: ${{ env.upstream }}" --body "PR created by GitHub Actions"
         fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
