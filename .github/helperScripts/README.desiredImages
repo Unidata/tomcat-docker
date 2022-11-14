@@ -1,0 +1,23 @@
+The "desiredImages" file is a plain-text file where each line contains an
+Extended Regular Expression (ERE) for a tag of the official tomcat image on
+DockerHub, followed by a space (" ") and either a 1 or a 0, denoting whether or
+not that pariticular tag is additionally tracked as the "latest" tag. For
+example:
+
+^10\.[0-9]{1,}\.[0-9]{1,}-jdk17-openjdk$ 0
+
+Is the tag for tomcat version 10.x.y using the jdk version 17 version of
+openjdk. The 0 at the end of the line indicates this won't be pushed to either
+GitHub or Docker as "latest."
+
+Note the "^" and "$" at the beginning and end of the ERE, respecitively. These
+are necessary to ensure specificity of the tag. Namely, while you may be wanting
+to specify the tag "10.0.12-jdk17-openjdk" with the ERE
+10\.[0-9]{1,}\.[0-9]{1,}-jdk17-openjdk, this would also match the following
+tags:
+
+10.0.12-jdk17-openjdk-slim-buster
+10.0.12-jdk17-openjdk-slim-bullseye
+10.0.12-jdk17-openjdk-slim
+10.0.12-jdk17-openjdk-buster
+10.0.12-jdk17-openjdk-bullseye

@@ -14,7 +14,8 @@ jobs:
   createMatrix:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix: ${{ steps.set-matrix.outputs.desiredImages }}
+      dockertags: ${{ steps.set-dockertags.outputs.dockertags }}
     
     steps:
       - name: Checkout default branch
@@ -22,26 +23,50 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create matrix
+      - name: Set environment variables
+        run: |
+          echo "upstream_image=tomcat" >> $GITHUB_ENV
+          echo "scriptsdir=.github/helperScripts" >> $GITHUB_ENV
+
+      # Funny workaround to output a multiline string to another job
+      # Pipe the multiline string into jq to create a minified JSON array where
+      # each element is an individual line.
+      # This minified array is output to GitHub Actions as a single line, can be
+      # read by another job, and parsed back to a multiline string using jq
+      - name: Fetch all tags and set as Github Actions output
+        id: set-dockertags
+        run: |
+          dockertags=$(\
+            ${{ env.scriptsdir }}/dockertags.sh \
+            --user ${{ secrets.registryuser }} \
+            --password ${{ secrets.registrypwd }} \
+            --namespace library \
+            --image ${{ env.upstream_image }} \
+            | jq -cR '[., inputs]' \
+          )
+          echo "dockertags=$dockertags" >> $GITHUB_OUTPUT
+
+      # Create a minified JSON object from the desiredImages file (see
+      # README.desiredImages for a description of its contents)
+      # The JSON object has the form:
+      # {
+      #   tag: [
+      #     {
+      #       "ERE": <ERE>,
+      #       "isLatest": <0|1>
+      #     },
+      #   ]
+      # }
+      - name: Create matrix output
         id: set-matrix
         run: |
-          matrix=$(
-          echo {\
-            $(.github/helperScripts/tomcatVersions.sh)", "\
-            $(.github/helperScripts/jdkVersions.sh)\
-          }\
-          )
-          echo $matrix
-          echo "::set-output name=matrix::$matrix"
-
-  verifyMatrix:
-    runs-on: ubuntu-latest
-    needs: createMatrix
-    steps:
-      - name: Verify matrix
-        run: |
-          matrix='${{ needs.createMatrix.outputs.matrix }}'
-          echo $matrix
+          echo "desiredImages=$(
+            jq -cnR '{
+              "tag": [
+                inputs/" " | {"ERE": .[0], "isLatest": .[1]}
+              ]
+            }' ${{ env.scriptsdir }}/desiredImages \
+          )" >> $GITHUB_OUTPUT
 
   checkUpstream:
     runs-on: ubuntu-latest
@@ -60,28 +85,25 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Verify repo has been cloned
+    - name: Check the most recent upstream tomcat version
       run: |
-        git status
-        git branch -a
-        git remote -v
-
-    - name: Check matrix outputs
-      run: |
-        echo "Tomcat: ${{ matrix.tomcat }} JDK: ${{ matrix.jdk }}"
-
-    - name: Grab the most recent upstream tomcat version
-      run: |
-        upstream=$( ${{ env.scriptsdir }}/dockertags.sh tomcat | ${{ env.scriptsdir }}/findTomcatVersion.sh ${{matrix.tomcat}} ${{ matrix.jdk }})
+        upstream=$(\
+          echo '${{ needs.createMatrix.outputs.dockertags }}' \
+          | jq -r '.[]' \
+          | grep -E -e '${{ matrix.tag.ERE }}' \
+          | sort -Vr \
+          | head -n 1 \
+        )
         echo $upstream
         echo "upstream=$upstream" >> $GITHUB_ENV
 
-    - name: Check if up to date
+    - name: Check if a branch on the repo is up to date
       run: |
-        echo Latest upstream version: ${{ env.upstream }}
-        echo "Current branches (tomcat: ${{ matrix.tomcat }}, jdk: ${{ matrix.jdk }}):"
-        git branch --list -r "origin/${{ matrix.tomcat }}.*-jdk${{ matrix.jdk }}-openjdk"
-        current=$( git branch --list -r "origin/${{ matrix.tomcat }}.*-jdk${{ matrix.jdk }}-openjdk" | sort -Vr | awk -F "/" '{ print $2 }' | head -n1 )
+        current=$(git branch --list -r "origin/*" \
+        | sed 's|^ *origin/||g' \
+        | grep -E -e '${{ matrix.tag.ERE }}' \
+        | sort -Vr \
+        | head -n 1)
         echo Most current branch: $current
         test "$current" = "${{ env.upstream }}" &&
         up2date=true || up2date=false
@@ -94,7 +116,7 @@ jobs:
       run: |
         echo "Already up to date with upstream: ${{ env.upstream }}"
 
-    - name: Checkout branch
+    - name: Checkout new branch
       if: ${{ env.up2date != 'true' }}
       run: |
         echo "tag=${{ env.upstream }}" >> $GITHUB_ENV
@@ -139,7 +161,9 @@ jobs:
 
     - name: Run test script
       if: ${{ env.up2date != 'true' }}
-      run: ./.github/testScripts/test.sh
+      run: |
+        ./.github/testScripts/test.sh \
+        && rm -rf $(pwd)/.github/testScripts/{sample.war,sample,actual.html}
 
     - name: Push to git
       if: ${{ env.up2date != 'true' }}
@@ -148,7 +172,6 @@ jobs:
         git config --global user.email $GITHUB_ACTOR@users.noreply.github.com
         git add . && git commit -m "Update to tomcat:${{ env.upstream }}" && \
         git push origin ${{ env.upstream }}
-        git push origin ${{ env.upstream }}:latest
 
     - name: Push to dockerhub
       if: ${{ env.up2date != 'true' }}
@@ -156,7 +179,15 @@ jobs:
         docker logout
         echo ${{ secrets.registrypwd }} | docker login -u ${{ secrets.registryuser }} --password-stdin
         docker push ${{ secrets.imagename }}:${{ env.tag }} && \
-        docker tag ${{ secrets.imagename }}:${{ env.tag }} ${{ secrets.imagename }}:latest && \
-        docker push ${{ secrets.imagename }}:latest && \
-        { docker logout && echo "Successfully pushed ${{ secrets.imagename }}:${{ env.tag }} and ${{ secrets.imagename }}:latest"; } ||
+        { docker logout && echo "Successfully pushed ${{ secrets.imagename }}:${{ env.tag }} to dockerhub"; } ||
         { docker logout && echo "Docker push failed" && exit 1; }
+
+    - name: Create PR targetting latest
+      if: ${{ env.up2date != 'true' }}
+      run: |
+        if [[ "${{ matrix.tag.isLatest }}" == "1" ]];
+        then
+          gh pr create --title "Update to tomcat: ${{ env.upstream }}" --body "PR created by GitHub Actions"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
