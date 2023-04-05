@@ -50,9 +50,7 @@ This repository contains files necessary to build and run a security hardened To
    :CUSTOM_ID: h-E01B4A0F
    :END:
 
-- ~unidata/tomcat-docker:latest~ (inherits ~tomcat:8.5-jdk8-openjdk~)
-- ~unidata/tomcat-docker:8.5~ (inherits ~tomcat:8.5-jdk8-openjdk~)
-- ~unidata/tomcat-docker:8.5-jdk11-openjdk~ (inherits ~tomcat:8.5-jdk8-openjdk~)
+See tags listed [[https://hub.docker.com/r/unidata/tomcat-docker/tags][on dockerhub]].
 
 ** Security Hardening Measures
    :PROPERTIES:
@@ -80,8 +78,15 @@ The following changes have been made to [[./web.xml][web.xml]] from the out-of-t
 
 - Added ~SAMEORIGIN~ anti-clickjacking option
 - HTTP header security filter (~httpHeaderSecurity~) uncommented/enabled
-- Cross-origin resource sharing (CORS) filtering (~CorsFilter~) added/enabled
+- Cross-origin resource sharing (CORS) filtering (~CorsFilter~) added/enabled (see below to disable)
 - Stack traces are not returned to user through ~error-page~ element.
+
+**** CORS
+:PROPERTIES:
+:CUSTOM_ID: h-B8DD8812
+:END:
+
+This image enables the [[https://tomcat.apache.org/tomcat-8.5-doc/config/filter.html#CORS_Filter][Apache Tomcat CORS filter]] by default. To disable it (maybe you want to handle CORS uniformly in a proxying webserver?), set environment variable ~DISABLE_CORS~ to ~1~.
 
 *** server.xml Enhancements
     :PROPERTIES:
@@ -183,7 +188,7 @@ or if using ~docker-compose~ the ~docker-compose.yml~ will look like:
     :CUSTOM_ID: h-0B755481
     :END:
 
-First, obtain a certificate from a certificate authority (CA). This process will yield a ~.key~ and ~.crt~ file. To meet enhanced security guidelines you, will want serve a certificate with the intermediate and root certificates present in the ~ssl.crt~ file. For Tomcat to serve the certificate chain, you have to put your ~.key~ and ~.crt~ (containing the intermediate and root certificates) in a Java keystore. The [[https://keystore-explorer.org/][Keystore Explorer]] tool is a helpful app to assist you in building a valid certificate chain as well as exploring Java keystores. 
+First, obtain a certificate from a certificate authority (CA). This process will yield a ~.key~ and ~.crt~ file. To meet enhanced security guidelines you, will want serve a certificate with the intermediate and root certificates present in the ~ssl.crt~ file. For Tomcat to serve the certificate chain, you have to put your ~.key~ and ~.crt~ (containing the intermediate and root certificates) in a Java keystore. The [[https://keystore-explorer.org/][Keystore Explorer]] tool is a helpful app to assist you in building a valid certificate chain as well as exploring Java keystores.
 
 First put the ~.key~ and ~.crt~ in a ~.p12~ file:
 
@@ -290,7 +295,7 @@ This container allows the possibility of controlling the UID/GID of the ~tomcat~
        -e TOMCAT_GROUP_ID=`getent group $USER | cut -d':' -f3` \
        -v `pwd`/logs:/usr/local/tomcat/logs/ \
        -v  /path/to/your/webapp:/usr/local/tomcat/webapps \
-       -d -p 8080:8080 unidata/tomcat-docker:latest
+       -d -p 8080:8080 unidata/tomcat-docker:<version>
 #+END_SRC
 
 where ~TOMCAT_USER_ID~ and ~TOMCAT_GROUP_ID~ have been configured with the UID/GID of the user running the container. If using ~docker-compose~, see ~compose.env~ to configure the UID/GID of user ~tomcat~ inside the container.
