@@ -23,9 +23,8 @@ This repository contains files necessary to build and run a security hardened To
 
 ## Versions
 
--   `unidata/tomcat-docker:latest` (inherits `tomcat:8.5-jdk8-openjdk`)
--   `unidata/tomcat-docker:8.5` (inherits `tomcat:8.5-jdk8-openjdk`)
--   `unidata/tomcat-docker:8.5-jdk11-openjdk` (inherits `tomcat:8.5-jdk11-openjdk`)
+See tags listed [on dockerhub](https://hub.docker.com/r/unidata/tomcat-docker/tags).
+
 
 <a id="h-C9AD76A0"></a>
 
@@ -52,10 +51,10 @@ The following changes have been made to [web.xml](./web.xml) from the out-of-the
 -   Cross-origin resource sharing (CORS) filtering (`CorsFilter`) added/enabled (see below to disable)
 -   Stack traces are not returned to user through `error-page` element.
 
-#### CORS
+1.  CORS
 
-This image enables the [Apache Tomcat CORS filter](https://tomcat.apache.org/tomcat-8.5-doc/config/filter.html#CORS_Filter) by
-default. To disable it (maybe you want to handle CORS uniformly in a proxying webserver?), set environment variable `DISABLE_CORS` to `1`.
+    This image enables the [Apache Tomcat CORS filter](https://tomcat.apache.org/tomcat-8.5-doc/config/filter.html#CORS_Filter) by default. To disable it (maybe you want to handle CORS uniformly in a proxying webserver?), set environment variable `DISABLE_CORS` to `1`.
+
 
 <a id="h-BC90DBB0"></a>
 
@@ -173,10 +172,12 @@ keytool -importkeystore -destkeystore keystore.jks -srckeystore ssl.p12 \
 
 When prompted for passwords in the two steps above, consider reusing the same password to reduce cognitive load. If you see the following message
 
-    Warning: The JKS keystore uses a proprietary format. It is recommended to
-    migrate to PKCS12 which is an industry standard format using "keytool
-    -importkeystore -srckeystore keystore.jks -destkeystore keystore.jks
-    -deststoretype pkcs12".
+```
+Warning: The JKS keystore uses a proprietary format. It is recommended to
+migrate to PKCS12 which is an industry standard format using "keytool
+-importkeystore -srckeystore keystore.jks -destkeystore keystore.jks
+-deststoretype pkcs12".
+```
 
 ignore it.
 
@@ -260,7 +261,7 @@ docker run --name tomcat \
      -e TOMCAT_GROUP_ID=`getent group $USER | cut -d':' -f3` \
      -v `pwd`/logs:/usr/local/tomcat/logs/ \
      -v  /path/to/your/webapp:/usr/local/tomcat/webapps \
-     -d -p 8080:8080 unidata/tomcat-docker:latest
+     -d -p 8080:8080 unidata/tomcat-docker:<version>
 ```
 
 where `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` have been configured with the UID/GID of the user running the container. If using `docker-compose`, see `compose.env` to configure the UID/GID of user `tomcat` inside the container.
