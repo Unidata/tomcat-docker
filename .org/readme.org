@@ -137,7 +137,7 @@ See tags listed [[https://hub.docker.com/r/unidata/tomcat-docker/tags][on docker
 
 Before you begin using this Docker container project, make sure your system has Docker installed. Docker Compose is optional but recommended.
 
-** Installation and Usage
+** Installation
 :PROPERTIES:
 :CUSTOM_ID: h-FB3558BB
 :END:
@@ -354,4 +354,28 @@ Once you have your certificates in order, make HTTPS mandatory. Add this snippet
         <transport-guarantee>CONFIDENTIAL</transport-guarantee>
       </user-data-constraint>
   </security-constraint>
+#+END_SRC
+
+** Testing
+:PROPERTIES:
+:CUSTOM_ID: h-32889858
+:END:
+
+If you would like to do a small test to ensure the Unidata Tomcat Docker image is working:
+
+#+BEGIN_SRC sh
+  mkdir -p /tmp/test
+  wget -O /tmp/test/sample.war https://tomcat.apache.org/tomcat-8.5-doc/appdev/sample/sample.war
+  docker run --name tomcat -e TOMCAT_USER_ID=1000 -e TOMCAT_GROUP_ID=1000 -v /tmp/test/:/usr/local/tomcat/webapps -d -p 8080:8080 unidata/tomcat-docker:<version>
+  curl  http://127.0.0.1:8080/sample/index.html
+#+END_SRC
+
+This should yield some HTML that starts like this:
+
+#+BEGIN_SRC html
+  <html>
+  <head>
+  <title>Sample "Hello, World" Application</title>
+  </head>
+  ...
 #+END_SRC

@@ -6,7 +6,7 @@
       - [Digested Passwords](#h-4CE92D2E)
   - [Versions](#h-6C0AB867)
   - [Prerequisites](#h-61809CB7)
-  - [Installation and Usage](#h-FB3558BB)
+  - [Installation](#h-FB3558BB)
   - [Usage](#h-B602CE28)
   - [Configuration](#h-AFA7F4DC)
     - [Configurable Tomcat UID and GID](#h-E4632DC9)
@@ -14,6 +14,7 @@
       - [Self-signed Certificates](#h-C24884FC)
       - [Certificate from CA](#h-B5E124BB)
       - [Force HTTPS](#h-787A700F)
+  - [Testing](#h-32889858)
 
 
 
@@ -112,7 +113,7 @@ Before you begin using this Docker container project, make sure your system has 
 
 <a id="h-FB3558BB"></a>
 
-## Installation and Usage
+## Installation
 
 You can either pull the image from DockerHub with:
 
@@ -326,4 +327,28 @@ Once you have your certificates in order, make HTTPS mandatory. Add this snippet
       <transport-guarantee>CONFIDENTIAL</transport-guarantee>
     </user-data-constraint>
 </security-constraint>
+```
+
+
+<a id="h-32889858"></a>
+
+## Testing
+
+If you would like to do a small test to ensure the Unidata Tomcat Docker image is working:
+
+```sh
+mkdir -p /tmp/test
+wget -O /tmp/test/sample.war https://tomcat.apache.org/tomcat-8.5-doc/appdev/sample/sample.war
+docker run --name tomcat -e TOMCAT_USER_ID=1000 -e TOMCAT_GROUP_ID=1000 -v /tmp/test/:/usr/local/tomcat/webapps -d -p 8080:8080 unidata/tomcat-docker:<version>
+curl  http://127.0.0.1:8080/sample/index.html
+```
+
+This should yield some HTML that starts like this:
+
+```html
+<html>
+<head>
+<title>Sample "Hello, World" Application</title>
+</head>
+...
 ```
