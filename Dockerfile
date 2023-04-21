@@ -17,7 +17,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     # Eliminate default web applications
     rm -rf ${CATALINA_HOME}/webapps/* && \
-    rm -rf ${CATALINA_HOME}/server/webapps/* && \
+    rm -rf ${CATALINA_HOME}/webapps.dist && \
     # Obscuring server info
     cd ${CATALINA_HOME}/lib && \
     mkdir -p org/apache/catalina/util/ && \
