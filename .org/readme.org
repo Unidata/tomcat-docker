@@ -1,30 +1,32 @@
-#+OPTIONS: ':nil *:t -:t ::t <:t H:4 \n:nil ^:t arch:headline author:t
-#+OPTIONS: broken-links:nil c:nil creator:nil d:(not "LOGBOOK") date:t e:t
-#+OPTIONS: email:nil f:t inline:t num:t p:nil pri:nil prop:nil stat:t tags:t
-#+OPTIONS: tasks:t tex:t timestamp:t title:t toc:t todo:t |:t
-#+OPTIONS: auto-id:t
+#+options: ':nil *:t -:t ::t <:t H:4 \n:nil ^:t arch:headline author:t
+#+options: broken-links:nil c:nil creator:nil d:(not "LOGBOOK") date:t e:t
+#+options: email:nil f:t inline:t num:t p:nil pri:nil prop:nil stat:t tags:t
+#+options: tasks:t tex:t timestamp:t title:t toc:t todo:t |:t
+#+options: auto-id:t
 
-#+TITLE: readme
-#+DATE: <2023-04-20 Thu>
-#+AUTHOR: Julien Chastang
-#+EMAIL: chastang@ucar.edu
-#+LANGUAGE: en
-#+SELECT_TAGS: export
-#+EXCLUDE_TAGS: noexport
-#+CREATOR: Emacs 26.3 (Org mode 9.2.1)
+#+title: readme
+#+date: <2023-04-20 Thu>
+#+author: Julien Chastang
+#+email: chastang@ucar.edu
+#+language: en
+#+select_tags: export
+#+exclude_tags: noexport
+#+creator: Emacs 26.3 (Org mode 9.2.1)
+
+#+property: :eval no :results none
 
 * Setup                                                            :noexport:
   :PROPERTIES:
   :CUSTOM_ID: h-A21B78FB
   :END:
 
-#+BEGIN_SRC emacs-lisp :results silent
+#+begin_src emacs-lisp :eval yes
   (setq org-confirm-babel-evaluate nil)
-#+END_SRC
+#+end_src
 
 Publishing
 
-#+BEGIN_SRC emacs-lisp :results silent
+#+begin_src emacs-lisp :eval yes
   (setq base-dir (concat (projectile-project-root) ".org"))
 
   (setq pub-dir (projectile-project-root))
@@ -36,7 +38,7 @@ Publishing
             :base-extension "org"
             :publishing-directory ,pub-dir
             :publishing-function org-gfm-publish-to-gfm)))
-#+END_SRC
+#+end_src
 
 * Unidata Tomcat Docker
 :PROPERTIES:
@@ -108,15 +110,15 @@ The active ~Connector~  has ~relaxedPathChars~ and ~relaxedQueryChars~ attribute
 
 This container has a ~UserDatabaseRealm~, ~Realm~ element in ~server.xml~ with a default ~CredentialHandler~ ~algorithm~ of ~sha-512~. This modification is an improvement over the clear text password default that comes with the parent container (~tomcat:8.5-jdk11~). Passwords defined in ~tomcat-users.xml~ must use digested passwords in the ~password~ attributes of the ~user~ elements. Generating a digested password is simple. Here is an example for the ~sha-512~ digest algorithm:
 
-#+BEGIN_SRC sh
+#+begin_src sh
   docker run tomcat  /usr/local/tomcat/bin/digest.sh -a "sha-512" mysupersecretpassword
-#+END_SRC
+#+end_src
 
 This command will yield something like:
 
-#+BEGIN_SRC sh
+#+begin_src sh
   mysupersecretpassword:94e334bc71163a69f2e984e73741f610e083a8e11764ee3e396f6935c3911f49$1$a5530e17501f83a60286f6363a8647a277c9cfdb
-#+END_SRC
+#+end_src
 
 The hash after the ~:~ is what you will use for the ~password~ attribute in ~tomcat-users.xml~.
 
@@ -184,14 +186,14 @@ The problem with mounted Docker volumes and UID/DIG mismatch headaches is best e
 
 This container allows the possibility of controlling the UID/GID of the ~tomcat~ user inside the container via ~TOMCAT_USER_ID~ and ~TOMCAT_GROUP_ID~ environment variables. If not set, the default UID/GID is ~1000/1000~. For example,
 
-#+BEGIN_SRC sh
+#+begin_src sh
   docker run --name tomcat \
        -e TOMCAT_USER_ID=`id -u` \
        -e TOMCAT_GROUP_ID=`getent group $USER | cut -d':' -f3` \
        -v `pwd`/logs:/usr/local/tomcat/logs/ \
        -v  /path/to/your/webapp:/usr/local/tomcat/webapps \
        -d -p 8080:8080 unidata/tomcat-docker:<version>
-#+END_SRC
+#+end_src
 
 where ~TOMCAT_USER_ID~ and ~TOMCAT_GROUP_ID~ have been configured with the UID/GID of the user running the container. If using ~docker-compose~, see ~compose.env~ to configure the UID/GID of user ~tomcat~ inside the container.
 
@@ -213,15 +215,15 @@ This Tomcat container can support HTTPS for either self-signed certificates whic
 
 This Tomcat container can support HTTP over SSL. For example, generate a self-signed certificate with ~openssl~ (or better yet, obtain a real certificate from a certificate authority):
 
-#+BEGIN_SRC sh
+#+begin_src sh
   openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 -subj \
       "/C=US/ST=Colorado/L=Boulder/O=Unidata/CN=tomcat.example.com" -keyout \
       ./ssl.key -out ./ssl.crt
-#+END_SRC
+#+end_src
 
 Then augment the ~server.xml~ from this repository with this additional XML snippet for [[https://tomcat.apache.org/tomcat-8.0-doc/ssl-howto.html][Tomcat SSL capability]]:
 
-#+BEGIN_SRC xml
+#+begin_src xml
   <Connector port="8443"
          maxThreads="150"
          enableLookups="false"
@@ -232,22 +234,22 @@ Then augment the ~server.xml~ from this repository with this additional XML snip
          SSLEnabled="true"
          SSLCertificateFile="${catalina.base}/conf/ssl.crt"
          SSLCertificateKeyFile="${catalina.base}/conf/ssl.key" />
-#+END_SRC
+#+end_src
 
 Mount over the existing ~server.xml~ and add the SSL certificate and
 private key with:
 
-#+BEGIN_SRC sh
+#+begin_src sh
   docker run -it -d  -p 80:8080 -p 443:8443 \
       -v /path/to/server.xml:/usr/local/tomcat/conf/server.xml \
       -v /path/to/ssl.crt:/usr/local/tomcat/conf/ssl.crt \
       -v /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key \
       unidata/tomcat-docker:<version>
-#+END_SRC
+#+end_src
 
 or if using ~docker-compose~ the ~docker-compose.yml~ will look like:
 
-#+BEGIN_SRC yaml
+#+begin_src yaml
   unidata-tomcat:
     image: unidata/tomcat-docker:<version>
     ports:
@@ -257,7 +259,7 @@ or if using ~docker-compose~ the ~docker-compose.yml~ will look like:
       - /path/to/ssl.crt:/usr/local/tomcat/conf/ssl.crt
       - /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key
       - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
-#+END_SRC
+#+end_src
 
 **** Certificate from CA
     :PROPERTIES:
@@ -268,32 +270,32 @@ First, obtain a certificate from a certificate authority (CA). This process will
 
 First put the ~.key~ and ~.crt~ in a ~.p12~ file:
 
-#+BEGIN_SRC sh
+#+begin_src sh
   openssl pkcs12 -export -in ssl.crt.fullchain -inkey ssl.key -out ssl.p12 -name \
       mydomain.com
-#+END_SRC
+#+end_src
 
 Then add the ~.p12~ file to the keystore:
 
-#+BEGIN_SRC
+#+begin_src
 keytool -importkeystore -destkeystore keystore.jks -srckeystore ssl.p12 \
     -srcstoretype PKCS12
-#+END_SRC
+#+end_src
 
 When prompted for passwords in the two steps above, consider reusing the same password to reduce cognitive load. If you see the following message
 
-#+BEGIN_EXAMPLE
+#+begin_example
 Warning: The JKS keystore uses a proprietary format. It is recommended to
 migrate to PKCS12 which is an industry standard format using "keytool
 -importkeystore -srckeystore keystore.jks -destkeystore keystore.jks
 -deststoretype pkcs12".
-#+END_EXAMPLE
+#+end_example
 
 ignore it.
 
 You'll then refer to that keystore in your ~server.xml~:
 
-#+BEGIN_SRC xml
+#+begin_src xml
 <Connector port="8443"
            protocol="org.apache.coyote.http11.Http11NioProtocol"
            clientAuth="false"
@@ -310,22 +312,22 @@ You'll then refer to that keystore in your ~server.xml~:
            keyAlias="mydomain.com"
            keystorePass="xxxx"
            />
-#+END_SRC
+#+end_src
 
 Note there are a few differences with the ~Connector~ described for the self-signed certificate above. These additions are made according to enhanced security guidelines.
 
 Mount over the existing ~server.xml~ and add the SSL certificate and private key with:
 
-#+BEGIN_SRC sh
+#+begin_src sh
   docker run -it -d  -p 80:8080 -p 443:8443 \
       -v /path/to/server.xml:/usr/local/tomcat/conf/server.xml \
       -v /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks \
       unidata/tomcat-docker:<version>
-#+END_SRC
+#+end_src
 
 or if using ~docker-compose~ the ~docker-compose.yml~ will look like:
 
-#+BEGIN_SRC yaml
+#+begin_src yaml
   unidata-tomcat:
     image: unidata/tomcat-docker:<version>
     ports:
@@ -334,7 +336,7 @@ or if using ~docker-compose~ the ~docker-compose.yml~ will look like:
     volumes:
       - /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks
       - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
-#+END_SRC
+#+end_src
 
 **** Force HTTPS
     :PROPERTIES:
@@ -343,7 +345,7 @@ or if using ~docker-compose~ the ~docker-compose.yml~ will look like:
 
 Once you have your certificates in order, make HTTPS mandatory. Add this snippet as the final element in  ~web.xml~. Mount over the ~web.xml~ inside the container with this enhanced ~web.xml~ in the same manner we have been doing to ~server.xml~ as discussed herein.
 
-#+BEGIN_SRC xml
+#+begin_src xml
   <!-- Force HTTPS, required for HTTP redirect! -->
   <security-constraint>
       <web-resource-collection>
@@ -354,7 +356,7 @@ Once you have your certificates in order, make HTTPS mandatory. Add this snippet
         <transport-guarantee>CONFIDENTIAL</transport-guarantee>
       </user-data-constraint>
   </security-constraint>
-#+END_SRC
+#+end_src
 
 ** Testing
 :PROPERTIES:
@@ -363,19 +365,19 @@ Once you have your certificates in order, make HTTPS mandatory. Add this snippet
 
 If you would like to do a small test to ensure the Unidata Tomcat Docker image is working:
 
-#+BEGIN_SRC sh
+#+begin_src sh
   mkdir -p /tmp/test
   wget -O /tmp/test/sample.war https://tomcat.apache.org/tomcat-8.5-doc/appdev/sample/sample.war
   docker run --name tomcat -e TOMCAT_USER_ID=1000 -e TOMCAT_GROUP_ID=1000 -v /tmp/test/:/usr/local/tomcat/webapps -d -p 8080:8080 unidata/tomcat-docker:<version>
   curl  http://127.0.0.1:8080/sample/index.html
-#+END_SRC
+#+end_src
 
 This should yield some HTML that starts like this:
 
-#+BEGIN_SRC html
+#+begin_src html
   <html>
   <head>
   <title>Sample "Hello, World" Application</title>
   </head>
   ...
-#+END_SRC
+#+end_src
