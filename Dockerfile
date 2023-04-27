@@ -1,7 +1,7 @@
 ###
 # Dockerfile for Unidata Tomcat.
 ###
-FROM tomcat:8.5-jdk11
+FROM tomcat:10-jdk17
 
 MAINTAINER Unidata
 
