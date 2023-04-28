@@ -1,9 +1,11 @@
 - [Unidata Tomcat Docker](#h-C944C5F1)
   - [Introduction](#h-1411CF81)
     - [Security Hardening Measures](#h-6C9EE33A)
+      - [Introduction](#h-F5641083)
       - [web.xml Enhancements](#h-76CE835C)
       - [server.xml Enhancements](#h-8027E0B0)
       - [Digested Passwords](#h-4CE92D2E)
+      - [CVEs](#h-C1DF14EF)
   - [Versions](#h-6C0AB867)
   - [Prerequisites](#h-61809CB7)
   - [Installation](#h-FB3558BB)
@@ -35,6 +37,11 @@ This repository contains files necessary to build and run a security hardened To
 <a id="h-6C9EE33A"></a>
 
 ### Security Hardening Measures
+
+
+<a id="h-F5641083"></a>
+
+#### Introduction
 
 This Tomcat container was security hardened according to [OWASP recommendations](https://www.owasp.org/index.php/Securing_tomcat). Specifically,
 
@@ -97,11 +104,18 @@ The hash after the `:` is what you will use for the `password` attribute in `tom
 More information about this topic is available in the [Tomcat documentation](https://tomcat.apache.org/tomcat-8.5-doc/realm-howto.html#Digested_Passwords).
 
 
+<a id="h-C1DF14EF"></a>
+
+#### CVEs
+
+We strive to maintain the security of this project's DockerHub images by updating them with the latest upstream security improvements. If you have any security concerns, please email us at [security@unidata.ucar.edu](mailto:security@unidata.ucar.edu) to bring them to our attention.
+
+
 <a id="h-6C0AB867"></a>
 
 ## Versions
 
-See tags listed [on dockerhub](https://hub.docker.com/r/unidata/tomcat-docker/tags).
+See tags listed [on dockerhub](https://hub.docker.com/r/unidata/tomcat-docker/tags). Note, these versions are not necessarily static and will evolve due to upstream image changes. It's recommended to check regularly to ensure you have the latest image.
 
 
 <a id="h-61809CB7"></a>
