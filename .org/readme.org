@@ -15,6 +15,8 @@
 
 #+property: :eval no :results none
 
+#+STARTUP: overview
+
 * Setup                                                            :noexport:
   :PROPERTIES:
   :CUSTOM_ID: h-A21B78FB
@@ -59,6 +61,10 @@ This repository contains files necessary to build and run a security hardened To
    :CUSTOM_ID: h-6C9EE33A
    :END:
 
+**** Introduction
+:PROPERTIES:
+:CUSTOM_ID: h-F5641083
+:END:
 This Tomcat container was security hardened according to [[https://www.owasp.org/index.php/Securing_tomcat][OWASP recommendations]]. Specifically,
 
 - Eliminated default Tomcat web applications
@@ -124,13 +130,19 @@ The hash after the ~:~ is what you will use for the ~password~ attribute in ~tom
 
 More information about this topic is available in the  [[https://tomcat.apache.org/tomcat-8.5-doc/realm-howto.html#Digested_Passwords][Tomcat documentation]].
 
+**** CVEs
+:PROPERTIES:
+:CUSTOM_ID: h-C1DF14EF
+:END:
+
+We strive to maintain the security of this project's DockerHub images by updating them with the latest upstream security improvements. If you have any security concerns, please email us at [[mailto:security@unidata.ucar.edu][security@unidata.ucar.edu]] to bring them to our attention.
 
 ** Versions
    :PROPERTIES:
    :CUSTOM_ID: h-6C0AB867
    :END:
 
-See tags listed [[https://hub.docker.com/r/unidata/tomcat-docker/tags][on dockerhub]].
+See tags listed [[https://hub.docker.com/r/unidata/tomcat-docker/tags][on dockerhub]]. Note, these versions are not necessarily static and will evolve due to upstream image changes. It's recommended to check regularly to ensure you have the latest image.
 
 ** Prerequisites
 :PROPERTIES:
