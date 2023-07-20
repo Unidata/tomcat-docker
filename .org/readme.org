@@ -3,6 +3,7 @@
 #+options: email:nil f:t inline:t num:t p:nil pri:nil prop:nil stat:t tags:t
 #+options: tasks:t tex:t timestamp:t title:t toc:t todo:t |:t
 #+options: auto-id:t
+#+options: H:6
 
 #+title: readme
 #+date: <2023-04-20 Thu>

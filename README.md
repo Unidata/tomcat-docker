@@ -3,6 +3,7 @@
     - [Security Hardening Measures](#h-6C9EE33A)
       - [Introduction](#h-F5641083)
       - [web.xml Enhancements](#h-76CE835C)
+        - [CORS](#h-6D53D9B2)
       - [server.xml Enhancements](#h-8027E0B0)
       - [Digested Passwords](#h-4CE92D2E)
       - [CVEs](#h-C1DF14EF)
@@ -64,9 +65,12 @@ The following changes have been made to [web.xml](./web.xml) from the out-of-the
 -   Cross-origin resource sharing (CORS) filtering (`CorsFilter`) added/enabled (see below to disable)
 -   Stack traces are not returned to user through `error-page` element.
 
-1.  CORS
 
-    This image enables the [Apache Tomcat CORS filter](https://tomcat.apache.org/tomcat-8.5-doc/config/filter.html#CORS_Filter) by default. To disable it (maybe you want to handle CORS uniformly in a proxying webserver?), set environment variable `DISABLE_CORS` to `1`.
+<a id="h-6D53D9B2"></a>
+
+##### CORS
+
+This image enables the [Apache Tomcat CORS filter](https://tomcat.apache.org/tomcat-8.5-doc/config/filter.html#CORS_Filter) by default. To disable it (maybe you want to handle CORS uniformly in a proxying webserver?), set environment variable `DISABLE_CORS` to `1`.
 
 
 <a id="h-8027E0B0"></a>
