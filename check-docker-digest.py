@@ -7,6 +7,7 @@
 
 import requests
 import datetime
+import subprocess
 
 DIGEST_FILE_PATH = "/tmp/tomcat-image-digest.txt"
 REPOSITORY = "library/tomcat"
@@ -56,6 +57,13 @@ def write_digest_to_file(file_path, digest):
         file.write(digest)
 
 
+def send_email_via_sendmail(recipient, sender, subject, body):
+    message = f"From: {sender}\nTo: {recipient}\nSubject: {subject}\n\n{body}"
+    process = subprocess.Popen(["/usr/sbin/sendmail", recipient],
+                               stdin=subprocess.PIPE)
+    process.communicate(message.encode('utf-8'))
+
+
 # Read the current digest from the file
 try:
     current_digest = read_digest_from_file(DIGEST_FILE_PATH)
@@ -76,6 +84,15 @@ if new_digest != current_digest:
     write_digest_to_file(DIGEST_FILE_PATH, new_digest)
     requests.get("https://maker.ifttt.com/trigger/tomcat/with/key/"
                  "xxx")
+
+    # Send an email about the update
+    sender = "user@example.edu"
+    recipient = "user@example.edu"
+    subject = "Upstream Tomcat Digest Updated"
+    body = f"New digest found: {new_digest} at {now}"
+
+    send_email_via_sendmail(recipient, sender, subject, body)
+
     print(f"Updated digest in {DIGEST_FILE_PATH}")
 else:
     print("Digests are the same. No update needed.")
