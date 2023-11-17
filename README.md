@@ -172,7 +172,7 @@ docker run -it unidata/tomcat-docker:8.5-jdk11 bash
 
 ### Configurable Tomcat UID and GID
 
-The problem with mounted Docker volumes and UID/DIG mismatch headaches is best explained here: <https://denibertovic.com/posts/handling-permissions-with-docker-volumes/>.
+The problem with mounted Docker volumes and UID/GID mismatch headaches is best explained here: <https://denibertovic.com/posts/handling-permissions-with-docker-volumes/>.
 
 This container allows the possibility of controlling the UID/GID of the `tomcat` user inside the container via `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` environment variables. If not set, the default UID/GID is `1000/1000`. For example,
 
