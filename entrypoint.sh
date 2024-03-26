@@ -31,7 +31,7 @@ if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
     ###
     if [ "$DISABLE_CORS" == "1" ]; then
       echo "Deactivating Tomcat CORS filter"
-      sed 's/<!-- CORS_START.*/<!-- CORS DEACTIVATED BY DISABLE_CORS -->\n<!--/; s/^.*<!-- CORS_END -->/-->/' \
+      sed -i 's/<!-- CORS_START.*/<!-- CORS DEACTIVATED BY DISABLE_CORS -->\n<!--/; s/^.*<!-- CORS_END -->/-->/' \
         ${CATALINA_HOME}/conf/web.xml
     fi
 
