@@ -94,7 +94,7 @@ The following changes have been made to [[./web.xml][web.xml]] from the out-of-t
 :CUSTOM_ID: h-6D53D9B2
 :END:
 
-This image enables the [[https://tomcat.apache.org/tomcat-8.5-doc/config/filter.html#CORS_Filter][Apache Tomcat CORS filter]] by default. To disable it (maybe you want to handle CORS uniformly in a proxying webserver?), set environment variable ~DISABLE_CORS~ to ~1~.
+This image enables the [[https://tomcat.apache.org/tomcat-9.0-doc/config/filter.html#CORS_Filter][Apache Tomcat CORS filter]] by default. To disable it (maybe you want to handle CORS uniformly in a proxying webserver?), set environment variable ~DISABLE_CORS~ to ~1~.
 
 **** server.xml Enhancements
     :PROPERTIES:
@@ -115,7 +115,7 @@ The active ~Connector~  has ~relaxedPathChars~ and ~relaxedQueryChars~ attribute
     :CUSTOM_ID: h-4CE92D2E
     :END:
 
-This container has a ~UserDatabaseRealm~, ~Realm~ element in ~server.xml~ with a default ~CredentialHandler~ ~algorithm~ of ~sha-512~. This modification is an improvement over the clear text password default that comes with the parent container (~tomcat:8.5-jdk11~). Passwords defined in ~tomcat-users.xml~ must use digested passwords in the ~password~ attributes of the ~user~ elements. Generating a digested password is simple. Here is an example for the ~sha-512~ digest algorithm:
+This container has a ~UserDatabaseRealm~, ~Realm~ element in ~server.xml~ with a default ~CredentialHandler~ ~algorithm~ of ~sha-512~. This modification is an improvement over the clear text password default that comes with the parent container (~tomcat:9.0-jdk11~). Passwords defined in ~tomcat-users.xml~ must use digested passwords in the ~password~ attributes of the ~user~ elements. Generating a digested password is simple. Here is an example for the ~sha-512~ digest algorithm:
 
 #+begin_src sh
   docker run tomcat  /usr/local/tomcat/bin/digest.sh -a "sha-512" mysupersecretpassword
@@ -129,7 +129,7 @@ This command will yield something like:
 
 The hash after the ~:~ is what you will use for the ~password~ attribute in ~tomcat-users.xml~.
 
-More information about this topic is available in the  [[https://tomcat.apache.org/tomcat-8.5-doc/realm-howto.html#Digested_Passwords][Tomcat documentation]].
+More information about this topic is available in the  [[https://tomcat.apache.org/tomcat-9.0-doc/realm-howto.html#Digested_Passwords][Tomcat documentation]].
 
 **** CVEs
 :PROPERTIES:
@@ -177,13 +177,13 @@ Or you can build it yourself with:
 Note that this project is meant to serve as a base image for other containerized Docker Tomcat web applications. Refer to the image created by this project in your Dockerfile. For example:
 
 #+begin_src sh
-  FROM unidata/tomcat-docker:8.5-jdk11
+  FROM unidata/tomcat-docker:9.0-jdk11
 #+end_src
 
 Sometimes it is useful to enter this container via bash and poke around, just to see what is there. For example,
 
 #+begin_src sh
-  docker run -it unidata/tomcat-docker:8.5-jdk11 bash
+  docker run -it unidata/tomcat-docker:9.0-jdk11 bash
 #+end_src
 
 ** Configuration
@@ -219,7 +219,7 @@ Note that containers that inherit this container and have overridden ~entrypoint
    :CUSTOM_ID: h-D725A36E
    :END:
 
-This Tomcat container can support HTTPS for either self-signed certificates which can be useful for experimentation or certificates from a CA for a production server. For a complete treatment on this topic, see https://tomcat.apache.org/tomcat-8.5-doc/ssl-howto.html.
+This Tomcat container can support HTTPS for either self-signed certificates which can be useful for experimentation or certificates from a CA for a production server. For a complete treatment on this topic, see https://tomcat.apache.org/tomcat-9.0-doc/ssl-howto.html.
 
 **** Self-signed Certificates
     :PROPERTIES:
@@ -380,7 +380,7 @@ If you would like to do a small test to ensure the Unidata Tomcat Docker image i
 
 #+begin_src sh
   mkdir -p /tmp/test
-  wget -O /tmp/test/sample.war https://tomcat.apache.org/tomcat-8.5-doc/appdev/sample/sample.war
+  wget -O /tmp/test/sample.war https://tomcat.apache.org/tomcat-9.0-doc/appdev/sample/sample.war
   docker run --name tomcat -e TOMCAT_USER_ID=1000 -e TOMCAT_GROUP_ID=1000 -v /tmp/test/:/usr/local/tomcat/webapps -d -p 8080:8080 unidata/tomcat-docker:<version>
   curl  http://127.0.0.1:8080/sample/index.html
 #+end_src
