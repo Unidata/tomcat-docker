@@ -10,6 +10,21 @@ if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
     USER_ID=${TOMCAT_USER_ID:-1000}
     GROUP_ID=${TOMCAT_GROUP_ID:-1000}
 
+    case "$USER_ID" in
+        (''|*[!0-9]*)
+            echo "ERROR: TOMCAT_USER_ID must be numeric, got '$USER_ID'" >&2;
+                      exit 1;;
+    esac
+    case "$GROUP_ID" in
+        (''|*[!0-9]*)
+            echo "ERROR: TOMCAT_GROUP_ID must be numeric, got '$GROUP_ID'" >&2;
+                      exit 1;;
+    esac
+    if [ "$USER_ID" -eq 0 ] || [ "$GROUP_ID" -eq 0 ]; then
+       echo "ERROR: TOMCAT_USER_ID and TOMCAT_GROUP_ID must be non-root" >&2
+       exit 1
+    fi
+
     ###
     # Tomcat user
     ###
