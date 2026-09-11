@@ -48,7 +48,7 @@ Publishing
 :CUSTOM_ID: h-C944C5F1
 :END:
 
-A security-hardened Tomcat container for [[https://github.com/Unidata/thredds-docker][thredds-docker]] and [[https://github.com/Unidata/ramadda-docker][ramadda-docker]].
+A security-hardened Tomcat container for [[https://github.com/Unidata/thredds-docker][thredds-docker]].
 
 ** Introduction
 :PROPERTIES:
@@ -108,7 +108,7 @@ The following changes have been made to [[./server.xml][server.xml]] from the ou
 - Shutdown port disabled
 - Digested passwords. See next section.
 
-The active ~Connector~  has ~relaxedPathChars~ and ~relaxedQueryChars~ attributes. This change may not be optimal for security, but must be done [[https://github.com/Unidata/thredds-docker/issues/209][to accommodate DAP requests]] which THREDDS and RAMADDA must perform.
+The active ~Connector~  has ~relaxedPathChars~ and ~relaxedQueryChars~ attributes. This change may not be optimal for security, but must be done [[https://github.com/Unidata/thredds-docker/issues/209][to accommodate THREDDS DAP requests]].
 
 **** Digested Passwords
     :PROPERTIES:

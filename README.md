@@ -25,7 +25,7 @@
 
 # Unidata Tomcat Docker
 
-A security-hardened Tomcat container for [thredds-docker](https://github.com/Unidata/thredds-docker) and [ramadda-docker](https://github.com/Unidata/ramadda-docker).
+A security-hardened Tomcat container for [thredds-docker](https://github.com/Unidata/thredds-docker).
 
 
 <a id="h-1411CF81"></a>
@@ -84,7 +84,7 @@ The following changes have been made to [server.xml](./server.xml) from the out-
 -   Shutdown port disabled
 -   Digested passwords. See next section.
 
-The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes. This change may not be optimal for security, but must be done [to accommodate DAP requests](https://github.com/Unidata/thredds-docker/issues/209) which THREDDS and RAMADDA must perform.
+The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes. This change may not be optimal for security, but must be done [to accommodate THREDDS DAP requests](https://github.com/Unidata/thredds-docker/issues/209).
 
 
 <a id="h-4CE92D2E"></a>
