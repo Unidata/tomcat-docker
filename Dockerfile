@@ -9,25 +9,13 @@ MAINTAINER Unidata
 RUN apt-get update && \
     apt-get install -y --no-install-recommends  \
         gosu \
-        zip \
-        unzip \
         && \
     # Cleanup
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     # Eliminate default web applications
     rm -rf ${CATALINA_HOME}/webapps/* && \
-    rm -rf ${CATALINA_HOME}/webapps.dist && \
-    # Obscuring server info
-    cd ${CATALINA_HOME}/lib && \
-    mkdir -p org/apache/catalina/util/ && \
-    unzip -j catalina.jar org/apache/catalina/util/ServerInfo.properties \
-        -d org/apache/catalina/util/ && \
-    sed -i 's/server.info=.*/server.info=Apache Tomcat/g' \
-        org/apache/catalina/util/ServerInfo.properties && \
-    zip -ur catalina.jar \
-        org/apache/catalina/util/ServerInfo.properties && \
-    rm -rf org && cd ${CATALINA_HOME}
+    rm -rf ${CATALINA_HOME}/webapps.dist
 
 # Security enhanced web.xml
 COPY web.xml ${CATALINA_HOME}/conf/
