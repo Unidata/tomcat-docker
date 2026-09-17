@@ -74,7 +74,6 @@ This Tomcat container was security hardened according to [[https://www.owasp.org
   ~entrypoint.sh~)
 - Files in ~CATALINA_HOME/conf~ are read only (~400~) by user ~tomcat~
   (via ~entrypoint.sh~)
-- Container-wide ~umask~ of ~007~
 
 **** web.xml Enhancements
     :PROPERTIES:
