@@ -61,7 +61,6 @@ The following changes have been made to [web.xml](./web.xml) from the out-of-the
 -   Added `SAMEORIGIN` anti-clickjacking option
 -   HTTP header security filter (`httpHeaderSecurity`) uncommented/enabled
 -   Cross-origin resource sharing (CORS) filtering (`CorsFilter`) added/enabled (see below to disable)
--   Stack traces are not returned to user through `error-page` element.
 
 
 <a id="h-6D53D9B2"></a>
@@ -80,6 +79,7 @@ The following changes have been made to [server.xml](./server.xml) from the out-
 -   Server version information is obscured to user via `server` attribute for all `Connector` elements
 -   `secure` attribute set to `true` for all `Connector` elements
 -   Shutdown port disabled
+-   Tomcat-generated error responses omit stack traces, error details, and server information via `ErrorReportValve`. Application-defined error responses must separately avoid exposing sensitive details.
 -   Digested passwords. See next section.
 
 The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes. This change may not be optimal for security, but must be done [to accommodate DAP requests](https://github.com/Unidata/thredds-docker/issues/209) which THREDDS and RAMADDA must perform.
