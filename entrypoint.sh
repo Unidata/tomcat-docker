@@ -1,9 +1,7 @@
 #!/bin/bash
 set -e
 
-# preferable to fire up Tomcat via start-tomcat.sh which will start Tomcat with
-# security manager, but inheriting containers can also start Tomcat via
-# catalina.sh
+# Start Tomcat via start-tomcat.sh; inheriting containers can also use catalina.sh.
 
 if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
 

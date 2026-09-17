@@ -48,7 +48,6 @@ This Tomcat container was security hardened according to [OWASP recommendations]
 
 -   Eliminated default Tomcat web applications
 -   Run Tomcat with unprivileged user `tomcat` (via `entrypoint.sh`)
--   Start Tomcat via Tomcat Security Manager (via `entrypoint.sh`)
 -   All files in `CATALINA_HOME` are owned by user `tomcat` (via `entrypoint.sh`)
 -   Files in `CATALINA_HOME/conf` are read only (`400`) by user `tomcat` (via `entrypoint.sh`)
 -   Container-wide `umask` of `007`
