@@ -27,10 +27,7 @@ RUN apt-get update && \
         org/apache/catalina/util/ServerInfo.properties && \
     zip -ur catalina.jar \
         org/apache/catalina/util/ServerInfo.properties && \
-    rm -rf org && cd ${CATALINA_HOME} && \
-    # Setting restrictive umask container-wide
-    echo "session optional pam_umask.so" >> /etc/pam.d/common-session && \
-    sed -i 's/UMASK.*022/UMASK           007/g' /etc/login.defs
+    rm -rf org && cd ${CATALINA_HOME}
 
 # Security enhanced web.xml
 COPY web.xml ${CATALINA_HOME}/conf/
