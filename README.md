@@ -77,7 +77,6 @@ This image enables the [Apache Tomcat CORS filter](https://tomcat.apache.org/tom
 The following changes have been made to [server.xml](./server.xml) from the out-of-the-box version:
 
 -   Server version information is obscured to user via `server` attribute for all `Connector` elements
--   `secure` attribute set to `true` for all `Connector` elements
 -   Shutdown port disabled
 -   Tomcat-generated error responses omit stack traces, error details, and server information via `ErrorReportValve`. Application-defined error responses must separately avoid exposing sensitive details.
 -   Digested passwords. See next section.
