@@ -44,7 +44,7 @@ This repository contains files necessary to build and run a security hardened To
 
 #### Introduction
 
-This Tomcat container was security hardened according to [OWASP recommendations](https://www.owasp.org/index.php/Securing_tomcat). Specifically,
+This image includes the security-related configuration changes listed below. Deployment and application security require additional configuration and validation.
 
 -   Eliminated default Tomcat web applications
 -   Run Tomcat with unprivileged user `tomcat` (via `entrypoint.sh`)
