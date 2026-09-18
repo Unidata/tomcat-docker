@@ -214,19 +214,21 @@ openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 -subj \
     ./ssl.key -out ./ssl.crt
 ```
 
-Then augment the `server.xml` from this repository with this additional XML snippet for [Tomcat SSL capability](https://tomcat.apache.org/tomcat-8.0-doc/ssl-howto.html):
+Then augment the `server.xml` from this repository with this additional XML snippet for [Tomcat SSL capability](https://tomcat.apache.org/tomcat-11.0-doc/ssl-howto.html):
 
 ```xml
 <Connector port="8443"
-       maxThreads="150"
-       enableLookups="false"
-       disableUploadTimeout="true"
-       acceptCount="100"
-       scheme="https"
-       secure="true"
-       SSLEnabled="true"
-       SSLCertificateFile="${catalina.base}/conf/ssl.crt"
-       SSLCertificateKeyFile="${catalina.base}/conf/ssl.key" />
+           protocol="org.apache.coyote.http11.Http11NioProtocol"
+           maxThreads="150"
+           enableLookups="false"
+           disableUploadTimeout="true"
+           acceptCount="100"
+           SSLEnabled="true">
+  <SSLHostConfig>
+    <Certificate certificateFile="${catalina.base}/conf/ssl.crt"
+                 certificateKeyFile="${catalina.base}/conf/ssl.key" />
+  </SSLHostConfig>
+</Connector>
 ```
 
 Mount over the existing `server.xml` and add the SSL certificate and private key with:
@@ -288,23 +290,20 @@ You'll then refer to that keystore in your `server.xml`:
 ```xml
 <Connector port="8443"
            protocol="org.apache.coyote.http11.Http11NioProtocol"
-           clientAuth="false"
-           sslProtocol="TLSv1.2, TLSv1.3"
-           ciphers="ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ECDHE-ECDSA-AES256-GCM-SHA384,ECDHE-RSA-AES256-GCM-SHA384,ECDHE-ECDSA-CHACHA20-POLY1305,ECDHE-RSA-CHACHA20-POLY1305,DHE-RSA-AES128-GCM-SHA256,DHE-RSA-AES256-GCM-SHA384"
            maxThreads="150"
            enableLookups="false"
            disableUploadTimeout="true"
            acceptCount="100"
-           scheme="https"
-           secure="true"
-           SSLEnabled="true"
-           keystoreFile="${catalina.base}/conf/keystore.jks"
-           keyAlias="mydomain.com"
-           keystorePass="xxxx"
-           />
+           SSLEnabled="true">
+  <SSLHostConfig protocols="TLSv1.2,TLSv1.3">
+    <Certificate certificateKeystoreFile="${catalina.base}/conf/keystore.jks"
+                 certificateKeyAlias="mydomain.com"
+                 certificateKeystorePassword="xxxx" />
+  </SSLHostConfig>
+</Connector>
 ```
 
-Note there are a few differences with the `Connector` described for the self-signed certificate above. These additions are made according to enhanced security guidelines.
+Note there are a few differences with the `Connector` described for the self-signed certificate above.
 
 Mount over the existing `server.xml` and add the SSL certificate and private key with:
 
