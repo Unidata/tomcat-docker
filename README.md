@@ -206,15 +206,19 @@ This Tomcat container can support HTTPS for either self-signed certificates whic
 
 #### Self-signed Certificates
 
-This Tomcat container can support HTTP over SSL. For example, generate a self-signed certificate with `openssl` (or better yet, obtain a real certificate from a certificate authority):
+For local HTTPS testing, generate a 30-day self-signed RSA certificate. This certificate is not intended for production.
 
 ```sh
-openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 -subj \
-    "/C=US/ST=Colorado/L=Boulder/O=Unidata/CN=tomcat.example.com" -keyout \
-    ./ssl.key -out ./ssl.crt
+openssl req -new -newkey rsa:4096 -sha256 -days 30 -nodes -x509 \
+    -subj "/CN=localhost" \
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+    -keyout ./ssl.key -out ./ssl.crt
+chmod 600 ./ssl.key
 ```
 
-Then augment the `server.xml` from this repository with this additional XML snippet for [Tomcat SSL capability](https://tomcat.apache.org/tomcat-11.0-doc/ssl-howto.html):
+The private key must be owned by the Tomcat runtime UID (1000 by default) for the 600 permissions above.
+
+Then augment the `server.xml` from this repository with this additional XML snippet for [Tomcat TLS capability](https://tomcat.apache.org/tomcat-11.0-doc/ssl-howto.html):
 
 ```xml
 <Connector port="8443"
@@ -231,28 +235,34 @@ Then augment the `server.xml` from this repository with this additional XML snip
 </Connector>
 ```
 
-Mount over the existing `server.xml` and add the SSL certificate and private key with:
+Mount the configuration, certificate, and private key read-only. Publish HTTPS on loopback for this local test:
 
 ```sh
-docker run -it -d  -p 80:8080 -p 443:8443 \
-    -v /path/to/server.xml:/usr/local/tomcat/conf/server.xml \
-    -v /path/to/ssl.crt:/usr/local/tomcat/conf/ssl.crt \
-    -v /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key \
-    unidata/tomcat-docker:<version>
+docker run -d -p 127.0.0.1:8443:8443 \
+    -v "$PWD/server.xml:/usr/local/tomcat/conf/server.xml:ro" \
+    -v "$PWD/ssl.crt:/usr/local/tomcat/conf/ssl.crt:ro" \
+    -v "$PWD/ssl.key:/usr/local/tomcat/conf/ssl.key:ro" \
+    tomcat-docker:<version>
 ```
 
-or if using `docker-compose` the `docker-compose.yml` will look like:
+Alternatively, after building the image, use this `docker-compose.yml` with `docker compose up -d`:
 
 ```yaml
-unidata-tomcat:
-  image: unidata/tomcat-docker:<version>
-  ports:
-    - "80:8080"
-    - "443:8443"
-  volumes:
-    - /path/to/ssl.crt:/usr/local/tomcat/conf/ssl.crt
-    - /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key
-    - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
+services:
+  unidata-tomcat:
+    image: tomcat-docker:<version>
+    ports:
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - ./ssl.crt:/usr/local/tomcat/conf/ssl.crt:ro
+      - ./ssl.key:/usr/local/tomcat/conf/ssl.key:ro
+      - ./server.xml:/usr/local/tomcat/conf/server.xml:ro
+```
+
+After Tomcat starts:
+
+```sh
+curl --cacert ./ssl.crt https://localhost:8443/
 ```
 
 
