@@ -48,8 +48,14 @@ This image includes the security-related configuration changes listed below. Dep
 
 -   Eliminated default Tomcat web applications
 -   Run Tomcat with unprivileged user `tomcat` (via `entrypoint.sh`)
--   All files in `CATALINA_HOME` are owned by user `tomcat` (via `entrypoint.sh`)
--   Files in `CATALINA_HOME/conf` are read only (`400`) by user `tomcat` (via `entrypoint.sh`)
+-   Only writable Tomcat runtime directories (`CATALINA_HOME/logs`, `CATALINA_HOME/temp`, and `CATALINA_HOME/work`) are owned by user `tomcat` (via `entrypoint.sh`). Ownership and permissions elsewhere in `CATALINA_HOME`, including `conf`, `bin`, `lib`, and `webapps`, are left unchanged.
+
+In your runtime configuration, ensure `server.xml` and `web.xml` bind mounts are read-only. This prevents the Tomcat process from modifying configuration files supplied by the host and is a recommended security practice. For example, with Docker Compose:
+
+```yaml
+- ./files/server.xml:/usr/local/tomcat/conf/server.xml:ro
+- ./files/web.xml:/usr/local/tomcat/conf/web.xml:ro
+```
 
 
 <a id="h-76CE835C"></a>
@@ -270,12 +276,10 @@ keytool -importkeystore -destkeystore keystore.jks -srckeystore ssl.p12 \
 
 When prompted for passwords in the two steps above, consider reusing the same password to reduce cognitive load. If you see the following message
 
-```
-Warning: The JKS keystore uses a proprietary format. It is recommended to
-migrate to PKCS12 which is an industry standard format using "keytool
--importkeystore -srckeystore keystore.jks -destkeystore keystore.jks
--deststoretype pkcs12".
-```
+    Warning: The JKS keystore uses a proprietary format. It is recommended to
+    migrate to PKCS12 which is an industry standard format using "keytool
+    -importkeystore -srckeystore keystore.jks -destkeystore keystore.jks
+    -deststoretype pkcs12".
 
 ignore it.
 
