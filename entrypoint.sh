@@ -37,13 +37,13 @@ if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
     # alter USER_ID with nologin shell and CATALINA_HOME home directory
     usermod -d "${CATALINA_HOME}" -s /sbin/nologin $(id -u -n $USER_ID)
 
-    ###
-    # Change CATALINA_HOME ownership to tomcat user and tomcat group
-    # Restrict permissions on conf
-    ###
-
-    chown -R $USER_ID:$GROUP_ID ${CATALINA_HOME} && find ${CATALINA_HOME}/conf \
-        -type d -exec chmod 755 {} \; -o -type f -exec chmod 400 {} \;
+    # Give the Tomcat runtime user ownership only of standard writable directories.
+    # Do not change ownership or permissions elsewhere in CATALINA_HOME.
+    for dir in logs temp work; do
+        if [ -d "${CATALINA_HOME}/${dir}" ]; then
+            chown -R "$USER_ID:$GROUP_ID" "${CATALINA_HOME}/${dir}"
+        fi
+    done
 
     ###
     # Deactivate CORS filter in web.xml if DISABLE_CORS=1
