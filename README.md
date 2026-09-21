@@ -45,8 +45,8 @@ This repository contains files necessary to build and run a security hardened To
 This image includes the security-related configuration changes listed below. Deployment and application security require additional configuration and validation.
 
 -   Eliminated default Tomcat web applications
--   Run Tomcat with unprivileged user `tomcat` (via `entrypoint.sh`)
--   Only writable Tomcat runtime directories (`CATALINA_HOME/logs`, `CATALINA_HOME/temp`, and `CATALINA_HOME/work`) are owned by user `tomcat` (via `entrypoint.sh`). Ownership and permissions elsewhere in `CATALINA_HOME`, including `conf`, `bin`, `lib`, and `webapps`, are left unchanged.
+-   Run Tomcat with an unprivileged runtime UID/GID (via `entrypoint.sh`)
+-   Only writable Tomcat runtime directories (`CATALINA_HOME/logs`, `CATALINA_HOME/temp`, and `CATALINA_HOME/work`) are owned by the configured runtime UID/GID. Ownership and permissions elsewhere in `CATALINA_HOME`, including `conf`, `bin`, `lib`, and `webapps`, are left unchanged.
 
 In your runtime configuration, ensure `server.xml` and `web.xml` bind mounts are read-only. This prevents the Tomcat process from modifying configuration files supplied by the host and is a recommended security practice. For example, with Docker Compose:
 
@@ -84,10 +84,11 @@ The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes
 
 #### Digested Passwords
 
-This container has a `UserDatabaseRealm`, `Realm` element in `server.xml` with a default `CredentialHandler` `algorithm` of `sha-512`. This modification is an improvement over the clear text password default that comes with the parent container (`tomcat:8.5-jdk11`). Passwords defined in `tomcat-users.xml` must use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `sha-512` digest algorithm:
+This container configures a `UserDatabaseRealm` in `server.xml` with a `CredentialHandler` using the `sha-512` algorithm. Passwords defined in `tomcat-users.xml` must therefore use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `sha-512` digest algorithm:
 
 ```sh
-docker run tomcat  /usr/local/tomcat/bin/digest.sh -a "sha-512" mysupersecretpassword
+docker run --rm tomcat:11-jdk17 \
+    /usr/local/tomcat/bin/digest.sh -a sha-512 mysupersecretpassword
 ```
 
 This command will yield something like:
@@ -98,7 +99,7 @@ mysupersecretpassword:94e334bc71163a69f2e984e73741f610e083a8e11764ee3e396f6935c3
 
 The hash after the `:` is what you will use for the `password` attribute in `tomcat-users.xml`.
 
-More information about this topic is available in the [Tomcat documentation](https://tomcat.apache.org/tomcat-8.5-doc/realm-howto.html#Digested_Passwords).
+More information about this topic is available in the [Tomcat documentation](https://tomcat.apache.org/tomcat-11.0-doc/realm-howto.html#Digested_Passwords).
 
 
 <a id="h-C1DF14EF"></a>
@@ -146,13 +147,13 @@ Or you can build it yourself with:
 Note that this project is meant to serve as a base image for other containerized Docker Tomcat web applications. Refer to the image created by this project in your Dockerfile. For example:
 
 ```sh
-FROM unidata/tomcat-docker:8.5-jdk11
+FROM unidata/tomcat-docker:<version>
 ```
 
 Sometimes it is useful to enter this container via bash and poke around, just to see what is there. For example,
 
 ```sh
-docker run -it unidata/tomcat-docker:8.5-jdk11 bash
+docker run -it unidata/tomcat-docker:<version> bash
 ```
 
 
@@ -167,7 +168,7 @@ docker run -it unidata/tomcat-docker:8.5-jdk11 bash
 
 The problem with mounted Docker volumes and UID/GID mismatch headaches is best explained here: <https://denibertovic.com/posts/handling-permissions-with-docker-volumes/>.
 
-This container allows the possibility of controlling the UID/GID of the `tomcat` user inside the container via `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` environment variables. If not set, the default UID/GID is `1000/1000`. For example,
+This container allows you to control the Tomcat runtime UID/GID via `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` environment variables. If not set, the default UID/GID is `1000/1000`. For example,
 
 ```sh
 docker run --name tomcat \
@@ -178,18 +179,20 @@ docker run --name tomcat \
      -d -p 8080:8080 unidata/tomcat-docker:<version>
 ```
 
-where `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` have been configured with the UID/GID of the user running the container. If using `docker-compose`, see `compose.env` to configure the UID/GID of user `tomcat` inside the container.
+where `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` have been configured with the desired runtime UID/GID. If using `docker compose`, see `compose.env` to configure the Tomcat runtime UID/GID inside the container.
+
+Bind-mounted files must be readable by the configured runtime UID/GID. For example, a TLS private key with mode `0600` must be owned by `TOMCAT_USER_ID`.
 
 This feature enables greater control of file permissions written outside the container via mounted volumes (e.g., files contained within the Tomcat logs directory such as `catalina.out`).
 
-Note that containers that inherit this container and have overridden `entrypoint.sh` will have to take into account user `tomcat` is no longer assumed in the `Dockerfile`. Rather the `tomcat` user is now created within the `entrypoint.sh` and those overriding `entrypoint.sh` should take this fact into account. Also note that this UID/GID configuration option will not work on operating systems where Docker is not native (e.g., macOS).
+Note that containers that inherit this container and override `entrypoint.sh` must arrange the Tomcat runtime UID/GID themselves. The supplied `entrypoint.sh` creates an account when needed or reuses an existing account with the configured UID. Also note that this UID/GID configuration option will not work on operating systems where Docker is not native (e.g., macOS).
 
 
 <a id="h-D725A36E"></a>
 
 ### HTTPS
 
-This Tomcat container can support HTTPS for either self-signed certificates which can be useful for experimentation or certificates from a CA for a production server. For a complete treatment on this topic, see <https://tomcat.apache.org/tomcat-8.5-doc/ssl-howto.html>.
+This Tomcat container can support HTTPS for either self-signed certificates which can be useful for experimentation or certificates from a CA for a production server. For a complete treatment on this topic, see <https://tomcat.apache.org/tomcat-11.0-doc/ssl-howto.html>.
 
 
 <a id="h-C24884FC"></a>
@@ -303,6 +306,8 @@ docker run -d -p 127.0.0.1:8443:8443 \
 
 The PKCS12 keystore contains the private key, so restrict access to it while ensuring it is readable by the Tomcat runtime user.
 
+Verify HTTPS after startup. A TLS connector initialization failure does not necessarily terminate Tomcat if another connector can still start.
+
 
 <a id="h-32889858"></a>
 
@@ -311,18 +316,15 @@ The PKCS12 keystore contains the private key, so restrict access to it while ens
 If you would like to do a small test to ensure the Unidata Tomcat Docker image is working:
 
 ```sh
-mkdir -p /tmp/test
-wget -O /tmp/test/sample.war https://tomcat.apache.org/tomcat-8.5-doc/appdev/sample/sample.war
-docker run --name tomcat -e TOMCAT_USER_ID=1000 -e TOMCAT_GROUP_ID=1000 -v /tmp/test/:/usr/local/tomcat/webapps -d -p 8080:8080 unidata/tomcat-docker:<version>
-curl  http://127.0.0.1:8080/sample/index.html
+mkdir -p /tmp/test/ROOT
+echo 'It works' > /tmp/test/ROOT/index.html
+docker run --name tomcat \
+    -e TOMCAT_USER_ID=1000 \
+    -e TOMCAT_GROUP_ID=1000 \
+    -v /tmp/test:/usr/local/tomcat/webapps:ro \
+    -d -p 127.0.0.1:8080:8080 \
+    tomcat-docker:<version>
+curl http://127.0.0.1:8080/
 ```
 
-This should yield some HTML that starts like this:
-
-```html
-<html>
-<head>
-<title>Sample "Hello, World" Application</title>
-</head>
-...
-```
+Expected result: `It works`.
