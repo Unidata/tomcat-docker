@@ -272,7 +272,7 @@ curl --cacert ./ssl.crt https://localhost:8443/
 
 Obtain a server certificate (`ssl.crt`), its private key (`ssl.key`), and any intermediate CA certificates (`intermediates.crt`), in PEM format. Do not include the root CA certificate.
 
-First create a PKCS12 bundle, then import it into a JKS keystore:
+Create a PKCS12 keystore:
 
 ```sh
 openssl pkcs12 -export \
@@ -280,18 +280,10 @@ openssl pkcs12 -export \
     -inkey ssl.key \
     -certfile intermediates.crt \
     -name mydomain.com \
-    -out ssl.p12
-
-keytool -importkeystore \
-    -srckeystore ssl.p12 \
-    -srcstoretype PKCS12 \
-    -srcalias mydomain.com \
-    -destkeystore keystore.jks \
-    -deststoretype JKS \
-    -destalias mydomain.com
+    -out keystore.p12
 ```
 
-For simplicity, use the same password for both commands. This example intentionally uses JKS even if keytool recommends PKCS12.
+OpenSSL will prompt for the password protecting `keystore.p12`.
 
 Add this connector inside the `Service` element in `server.xml`:
 
@@ -300,25 +292,26 @@ Add this connector inside the `Service` element in `server.xml`:
            protocol="org.apache.coyote.http11.Http11NioProtocol"
            SSLEnabled="true">
   <SSLHostConfig protocols="TLSv1.2,TLSv1.3">
-    <Certificate certificateKeystoreFile="${catalina.base}/conf/keystore.jks"
+    <Certificate certificateKeystoreFile="${catalina.base}/conf/keystore.p12"
+                 certificateKeystoreType="PKCS12"
                  certificateKeyAlias="mydomain.com"
                  certificateKeystorePassword="xxxx" />
   </SSLHostConfig>
 </Connector>
 ```
 
-Replace `xxxx` with the keystore password.
+Replace `xxxx` with the password entered when creating the keystore.
 
 Mount `server.xml` and the keystore read-only, using your locally built `tomcat-docker:<version>` image:
 
 ```sh
 docker run -d -p 127.0.0.1:8443:8443 \
     -v "$PWD/server.xml:/usr/local/tomcat/conf/server.xml:ro" \
-    -v "$PWD/keystore.jks:/usr/local/tomcat/conf/keystore.jks:ro" \
+    -v "$PWD/keystore.p12:/usr/local/tomcat/conf/keystore.p12:ro" \
     tomcat-docker:<version>
 ```
 
-The keystore contains the private key, so restrict access to it while ensuring it is readable by the Tomcat runtime user.
+The PKCS12 keystore contains the private key, so restrict access to it while ensuring it is readable by the Tomcat runtime user.
 
 
 <a id="h-787A700F"></a>
