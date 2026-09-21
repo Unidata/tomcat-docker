@@ -26,16 +26,23 @@ if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
     ###
     # Tomcat user
     ###
-    # create group for GROUP_ID if one doesn't already exist
-    if ! getent group $GROUP_ID &> /dev/null; then
-      groupadd -r tomcat -g $GROUP_ID
+    # Create group for GROUP_ID if one doesn't already exist.
+    if ! getent group "$GROUP_ID" &> /dev/null; then
+        groupadd -r tomcat -g "$GROUP_ID"
     fi
-    # create user for USER_ID if one doesn't already exist
-    if ! getent passwd $USER_ID &> /dev/null; then
-      useradd -u $USER_ID -g $GROUP_ID tomcat
+
+    # Create user for USER_ID if one doesn't already exist.
+    if ! getent passwd "$USER_ID" &> /dev/null; then
+        useradd \
+            -u "$USER_ID" \
+            -g "$GROUP_ID" \
+            -d "$CATALINA_HOME" \
+            -s /sbin/nologin \
+            tomcat
+    else
+        # Ensure an existing UID uses the requested primary group.
+        usermod -g "$GROUP_ID" "$(id -u -n "$USER_ID")"
     fi
-    # alter USER_ID with nologin shell and CATALINA_HOME home directory
-    usermod -d "${CATALINA_HOME}" -s /sbin/nologin $(id -u -n $USER_ID)
 
     # Give the Tomcat runtime user ownership only of standard writable directories.
     # Do not change ownership or permissions elsewhere in CATALINA_HOME.
@@ -45,7 +52,7 @@ if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
         fi
     done
 
-    exec gosu $USER_ID "$@"
+    exec gosu "$USER_ID" "$@"
 fi
 
 exec "$@"
