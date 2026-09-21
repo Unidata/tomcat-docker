@@ -27,7 +27,6 @@
   (setq org-confirm-babel-evaluate nil)
 #+end_src
 
-Publishing
 
 #+begin_src emacs-lisp :eval yes
   (setq base-dir (concat (projectile-project-root) ".org"))
@@ -78,7 +77,7 @@ In your runtime configuration, ensure ~server.xml~ and ~web.xml~ bind mounts are
 - ./files/server.xml:/usr/local/tomcat/conf/server.xml:ro
 - ./files/web.xml:/usr/local/tomcat/conf/web.xml:ro
 #+end_src
-    
+
 **** web.xml Enhancements
     :PROPERTIES:
     :CUSTOM_ID: h-76CE835C
@@ -89,7 +88,7 @@ The following changes have been made to [[./web.xml][web.xml]] from the out-of-t
 - Added ~SAMEORIGIN~ anti-clickjacking option
 - HTTP header security filter (~httpHeaderSecurity~) uncommented/enabled
 - Cross-origin resource sharing (CORS) filtering (~CorsFilter~) added/enabled (see below to disable)
-  
+
 ***** CORS
 :PROPERTIES:
 :CUSTOM_ID: h-6D53D9B2
@@ -166,7 +165,7 @@ You can either pull the image from DockerHub with:
 
 Or you can build it yourself with:
 
-  1. **Clone the repository**: ~git clone https://github.com/Unidata/tomcat-docker.git~       
+  1. **Clone the repository**: ~git clone https://github.com/Unidata/tomcat-docker.git~
   2. **Navigate to the project directory**: ~cd tomcat-docker~
   3. **Build the Docker image**: ~docker build -t tomcat-docker:<version>~ .
 
@@ -286,49 +285,39 @@ After Tomcat starts:
   curl --cacert ./ssl.crt https://localhost:8443/
 #+end_src
 
-
-
 **** Certificate from CA
     :PROPERTIES:
     :CUSTOM_ID: h-B5E124BB
     :END:
 
-First, obtain a certificate from a certificate authority (CA). This process will yield a ~.key~ and ~.crt~ file. To meet enhanced security guidelines you, will want to serve a certificate with the intermediate and root certificates present in the ~ssl.crt~ file. For Tomcat to serve the certificate chain, you have to put your ~.key~ and ~.crt~ (containing the intermediate and root certificates) in a Java keystore. The [[https://keystore-explorer.org/][Keystore Explorer]] tool is a helpful app to assist you in building a valid certificate chain as well as exploring Java keystores.
+Obtain a server certificate (~ssl.crt~), its private key (~ssl.key~), and any intermediate CA certificates (~intermediates.crt~), in PEM format. Do not include the root CA certificate.
 
-First put the ~.key~ and ~.crt~ in a ~.p12~ file:
+First create a PKCS12 bundle, then import it into a JKS keystore:
 
 #+begin_src sh
-  openssl pkcs12 -export -in ssl.crt.fullchain -inkey ssl.key -out ssl.p12 -name \
-      mydomain.com
+  openssl pkcs12 -export \
+      -in ssl.crt \
+      -inkey ssl.key \
+      -certfile intermediates.crt \
+      -name mydomain.com \
+      -out ssl.p12
+
+  keytool -importkeystore \
+      -srckeystore ssl.p12 \
+      -srcstoretype PKCS12 \
+      -srcalias mydomain.com \
+      -destkeystore keystore.jks \
+      -deststoretype JKS \
+      -destalias mydomain.com
 #+end_src
 
-Then add the ~.p12~ file to the keystore:
+For simplicity, use the same password for both commands. This example intentionally uses JKS even if keytool recommends PKCS12.
 
-#+begin_src
-keytool -importkeystore -destkeystore keystore.jks -srckeystore ssl.p12 \
-    -srcstoretype PKCS12
-#+end_src
-
-When prompted for passwords in the two steps above, consider reusing the same password to reduce cognitive load. If you see the following message
-
-#+begin_example
-Warning: The JKS keystore uses a proprietary format. It is recommended to
-migrate to PKCS12 which is an industry standard format using "keytool
--importkeystore -srckeystore keystore.jks -destkeystore keystore.jks
--deststoretype pkcs12".
-#+end_example
-
-ignore it.
-
-You'll then refer to that keystore in your ~server.xml~:
+Add this connector inside the ~Service~ element in ~server.xml~:
 
 #+begin_src xml
   <Connector port="8443"
              protocol="org.apache.coyote.http11.Http11NioProtocol"
-             maxThreads="150"
-             enableLookups="false"
-             disableUploadTimeout="true"
-             acceptCount="100"
              SSLEnabled="true">
     <SSLHostConfig protocols="TLSv1.2,TLSv1.3">
       <Certificate certificateKeystoreFile="${catalina.base}/conf/keystore.jks"
@@ -338,29 +327,18 @@ You'll then refer to that keystore in your ~server.xml~:
   </Connector>
 #+end_src
 
-Note there are a few differences with the ~Connector~ described for the self-signed certificate above.
+Replace ~xxxx~ with the keystore password.
 
-Mount over the existing ~server.xml~ and add the SSL certificate and private key with:
+Mount ~server.xml~ and the keystore read-only, using your locally built ~tomcat-docker:<version>~ image:
 
 #+begin_src sh
-  docker run -it -d  -p 80:8080 -p 443:8443 \
-      -v /path/to/server.xml:/usr/local/tomcat/conf/server.xml \
-      -v /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks \
-      unidata/tomcat-docker:<version>
+  docker run -d -p 127.0.0.1:8443:8443 \
+      -v "$PWD/server.xml:/usr/local/tomcat/conf/server.xml:ro" \
+      -v "$PWD/keystore.jks:/usr/local/tomcat/conf/keystore.jks:ro" \
+      tomcat-docker:<version>
 #+end_src
 
-or if using ~docker-compose~ the ~docker-compose.yml~ will look like:
-
-#+begin_src yaml
-  unidata-tomcat:
-    image: unidata/tomcat-docker:<version>
-    ports:
-      - "80:8080"
-      - "443:8443"
-    volumes:
-      - /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks
-      - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
-#+end_src
+The keystore contains the private key, so restrict access to it while ensuring it is readable by the Tomcat runtime user.
 
 **** Force HTTPS
     :PROPERTIES:

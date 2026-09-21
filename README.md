@@ -270,40 +270,34 @@ curl --cacert ./ssl.crt https://localhost:8443/
 
 #### Certificate from CA
 
-First, obtain a certificate from a certificate authority (CA). This process will yield a `.key` and `.crt` file. To meet enhanced security guidelines you, will want to serve a certificate with the intermediate and root certificates present in the `ssl.crt` file. For Tomcat to serve the certificate chain, you have to put your `.key` and `.crt` (containing the intermediate and root certificates) in a Java keystore. The [Keystore Explorer](https://keystore-explorer.org/) tool is a helpful app to assist you in building a valid certificate chain as well as exploring Java keystores.
+Obtain a server certificate (`ssl.crt`), its private key (`ssl.key`), and any intermediate CA certificates (`intermediates.crt`), in PEM format. Do not include the root CA certificate.
 
-First put the `.key` and `.crt` in a `.p12` file:
+First create a PKCS12 bundle, then import it into a JKS keystore:
 
 ```sh
-openssl pkcs12 -export -in ssl.crt.fullchain -inkey ssl.key -out ssl.p12 -name \
-    mydomain.com
+openssl pkcs12 -export \
+    -in ssl.crt \
+    -inkey ssl.key \
+    -certfile intermediates.crt \
+    -name mydomain.com \
+    -out ssl.p12
+
+keytool -importkeystore \
+    -srckeystore ssl.p12 \
+    -srcstoretype PKCS12 \
+    -srcalias mydomain.com \
+    -destkeystore keystore.jks \
+    -deststoretype JKS \
+    -destalias mydomain.com
 ```
 
-Then add the `.p12` file to the keystore:
+For simplicity, use the same password for both commands. This example intentionally uses JKS even if keytool recommends PKCS12.
 
-```
-keytool -importkeystore -destkeystore keystore.jks -srckeystore ssl.p12 \
-    -srcstoretype PKCS12
-```
-
-When prompted for passwords in the two steps above, consider reusing the same password to reduce cognitive load. If you see the following message
-
-    Warning: The JKS keystore uses a proprietary format. It is recommended to
-    migrate to PKCS12 which is an industry standard format using "keytool
-    -importkeystore -srckeystore keystore.jks -destkeystore keystore.jks
-    -deststoretype pkcs12".
-
-ignore it.
-
-You'll then refer to that keystore in your `server.xml`:
+Add this connector inside the `Service` element in `server.xml`:
 
 ```xml
 <Connector port="8443"
            protocol="org.apache.coyote.http11.Http11NioProtocol"
-           maxThreads="150"
-           enableLookups="false"
-           disableUploadTimeout="true"
-           acceptCount="100"
            SSLEnabled="true">
   <SSLHostConfig protocols="TLSv1.2,TLSv1.3">
     <Certificate certificateKeystoreFile="${catalina.base}/conf/keystore.jks"
@@ -313,29 +307,18 @@ You'll then refer to that keystore in your `server.xml`:
 </Connector>
 ```
 
-Note there are a few differences with the `Connector` described for the self-signed certificate above.
+Replace `xxxx` with the keystore password.
 
-Mount over the existing `server.xml` and add the SSL certificate and private key with:
+Mount `server.xml` and the keystore read-only, using your locally built `tomcat-docker:<version>` image:
 
 ```sh
-docker run -it -d  -p 80:8080 -p 443:8443 \
-    -v /path/to/server.xml:/usr/local/tomcat/conf/server.xml \
-    -v /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks \
-    unidata/tomcat-docker:<version>
+docker run -d -p 127.0.0.1:8443:8443 \
+    -v "$PWD/server.xml:/usr/local/tomcat/conf/server.xml:ro" \
+    -v "$PWD/keystore.jks:/usr/local/tomcat/conf/keystore.jks:ro" \
+    tomcat-docker:<version>
 ```
 
-or if using `docker-compose` the `docker-compose.yml` will look like:
-
-```yaml
-unidata-tomcat:
-  image: unidata/tomcat-docker:<version>
-  ports:
-    - "80:8080"
-    - "443:8443"
-  volumes:
-    - /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks
-    - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
-```
+The keystore contains the private key, so restrict access to it while ensuring it is readable by the Tomcat runtime user.
 
 
 <a id="h-787A700F"></a>
