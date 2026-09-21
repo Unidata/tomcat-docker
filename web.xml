@@ -612,24 +612,6 @@
     </filter-mapping>
 -->
 
-    <!-- Note: the CORS_* comments surrounding this section need to be left intact
-               so the entrypoint script can deactivate Cors settings if DISABLE_CORS is set -->
-    <!-- CORS_START -->
-    <filter>
-        <filter-name>CorsFilter</filter-name>
-        <filter-class>org.apache.catalina.filters.CorsFilter</filter-class>
-        <init-param>
-            <param-name>cors.allowed.methods</param-name>
-            <param-value>GET,POST,HEAD</param-value>
-        </init-param>
-    </filter>
-
-    <filter-mapping>
-        <filter-name>CorsFilter</filter-name>
-        <url-pattern>/*</url-pattern>
-    </filter-mapping>
-    <!-- CORS_END -->
-
   <!-- ==================== Default Session Configuration ================= -->
   <!-- You can set the default session timeout (in minutes) for all newly   -->
   <!-- created sessions by modifying the value below.                       -->
