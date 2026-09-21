@@ -333,26 +333,6 @@ Mount ~server.xml~ and the keystore read-only, using your locally built ~tomcat-
 
 The PKCS12 keystore contains the private key, so restrict access to it while ensuring it is readable by the Tomcat runtime user.
 
-**** Force HTTPS
-    :PROPERTIES:
-    :CUSTOM_ID: h-787A700F
-    :END:
-
-Once you have your certificates in order, make HTTPS mandatory. Add this snippet as the final element in  ~web.xml~. Mount over the ~web.xml~ inside the container with this enhanced ~web.xml~ in the same manner we have been doing to ~server.xml~ as discussed herein.
-
-#+begin_src xml
-  <!-- Force HTTPS, required for HTTP redirect! -->
-  <security-constraint>
-      <web-resource-collection>
-        <web-resource-name>Protected Context</web-resource-name>
-        <url-pattern>/*</url-pattern>
-      </web-resource-collection>
-      <user-data-constraint>
-        <transport-guarantee>CONFIDENTIAL</transport-guarantee>
-      </user-data-constraint>
-  </security-constraint>
-#+end_src
-
 ** Testing
 :PROPERTIES:
 :CUSTOM_ID: h-32889858

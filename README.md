@@ -16,7 +16,6 @@
     - [HTTPS](#h-D725A36E)
       - [Self-signed Certificates](#h-C24884FC)
       - [Certificate from CA](#h-B5E124BB)
-      - [Force HTTPS](#h-787A700F)
   - [Testing](#h-32889858)
 
 
@@ -312,26 +311,6 @@ docker run -d -p 127.0.0.1:8443:8443 \
 ```
 
 The PKCS12 keystore contains the private key, so restrict access to it while ensuring it is readable by the Tomcat runtime user.
-
-
-<a id="h-787A700F"></a>
-
-#### Force HTTPS
-
-Once you have your certificates in order, make HTTPS mandatory. Add this snippet as the final element in `web.xml`. Mount over the `web.xml` inside the container with this enhanced `web.xml` in the same manner we have been doing to `server.xml` as discussed herein.
-
-```xml
-<!-- Force HTTPS, required for HTTP redirect! -->
-<security-constraint>
-    <web-resource-collection>
-      <web-resource-name>Protected Context</web-resource-name>
-      <url-pattern>/*</url-pattern>
-    </web-resource-collection>
-    <user-data-constraint>
-      <transport-guarantee>CONFIDENTIAL</transport-guarantee>
-    </user-data-constraint>
-</security-constraint>
-```
 
 
 <a id="h-32889858"></a>
