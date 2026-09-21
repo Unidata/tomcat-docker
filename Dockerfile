@@ -3,7 +3,7 @@
 ###
 FROM tomcat:11-jdk17
 
-MAINTAINER Unidata
+LABEL org.opencontainers.image.authors="UCAR / NSF Unidata"
 
 # Install necessary packages
 RUN apt-get update && \
