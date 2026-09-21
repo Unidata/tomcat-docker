@@ -15,7 +15,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     # Eliminate default web applications
     rm -rf ${CATALINA_HOME}/webapps/* && \
-    rm -rf ${CATALINA_HOME}/webapps.dist
+    rm -rf ${CATALINA_HOME}/webapps.dist && \
+    mkdir -p ${CATALINA_HOME}/conf/Catalina/localhost
 
 # Security enhanced web.xml
 COPY web.xml ${CATALINA_HOME}/conf/
