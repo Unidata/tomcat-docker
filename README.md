@@ -77,7 +77,7 @@ The following changes have been made to [server.xml](./server.xml) from the out-
 -   Tomcat-generated error responses omit stack traces, error details, and server information via `ErrorReportValve`. Application-defined error responses must separately avoid exposing sensitive details.
 -   Digested passwords. See next section.
 
-The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes. This change may not be optimal for security, but must be done [to accommodate DAP requests](https://github.com/Unidata/thredds-docker/issues/209) which THREDDS.
+The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes. This change may not be optimal for security, but must be done [to accommodate DAP requests](https://github.com/Unidata/thredds-docker/issues/209) which THREDDS must perform.
 
 
 <a id="h-4CE92D2E"></a>
