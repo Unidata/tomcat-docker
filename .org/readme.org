@@ -69,7 +69,7 @@ This image includes the security-related configuration changes listed below. Dep
 
 - Eliminated default Tomcat web applications
 - Run Tomcat with an unprivileged runtime UID/GID (via ~entrypoint.sh~)
-- Only writable Tomcat runtime directories (~CATALINA_HOME/logs~, ~CATALINA_HOME/temp~, and ~CATALINA_HOME/work~) are owned by the configured runtime UID/GID. Ownership and permissions elsewhere in ~CATALINA_HOME~, including ~conf~, ~bin~, ~lib~, and ~webapps~, are left unchanged.
+- By default, only writable Tomcat runtime directories (~CATALINA_HOME/logs~, ~CATALINA_HOME/temp~, and ~CATALINA_HOME/work~) are owned by the configured runtime UID/GID. Ownership and permissions elsewhere in ~CATALINA_HOME~, including ~conf~, ~bin~, ~lib~, and ~webapps~, are left unchanged.
 
 In your runtime configuration, ensure ~server.xml~ and ~web.xml~ bind mounts are read-only. This prevents the Tomcat process from modifying configuration files supplied by the host and is a recommended security practice. For example, with Docker Compose:
 
@@ -207,7 +207,15 @@ Bind-mounted files must be readable by the configured runtime UID/GID. For examp
 
 This feature enables greater control of file permissions written outside the container via mounted volumes (e.g., files contained within the Tomcat logs directory such as ~catalina.out~).
 
-Note that containers that inherit this container and override ~entrypoint.sh~ must arrange the Tomcat runtime UID/GID themselves. The supplied ~entrypoint.sh~ creates an account when needed or reuses an existing account with the configured UID. Also note that this UID/GID configuration option will not work on operating systems where Docker is not native (e.g., macOS).
+Derived images and applications that need additional runtime state can provide whitespace-separated directories relative to ~CATALINA_HOME~:
+
+#+begin_src Dockerfile
+  ENV TOMCAT_ADDITIONAL_WRITABLE_DIRS="content/thredds"
+#+end_src
+
+At container startup, each existing directory is recursively assigned to the configured Tomcat runtime UID/GID. The base image itself continues to make only ~logs~, ~temp~, and ~work~ writable.
+
+Note that containers that inherit this container and override ~entrypoint.sh~ must arrange the Tomcat runtime UID/GID themselves. The supplied ~entrypoint.sh~ creates an account when needed or reuses an existing account with the configured UID. On Docker Desktop for macOS, bind-mount ownership and permission behavior differs from native Linux, so matching container UID/GID values may not produce the same host filesystem behavior.
 
 *** HTTPS
    :PROPERTIES:
