@@ -52,6 +52,52 @@ if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
         fi
     done
 
+    # Give derived images ownership of explicitly declared runtime directories.
+    if [ -n "${TOMCAT_ADDITIONAL_WRITABLE_DIRS:-}" ]; then
+        CATALINA_HOME_REAL=$(realpath -e -- "$CATALINA_HOME")
+        read -r -a ADDITIONAL_WRITABLE_DIRS <<< "$TOMCAT_ADDITIONAL_WRITABLE_DIRS"
+        RESOLVED_WRITABLE_DIRS=()
+
+        for dir in "${ADDITIONAL_WRITABLE_DIRS[@]}"; do
+            case "$dir" in
+                /*)
+                    echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS entries must be relative: '$dir'" >&2
+                    exit 1
+                    ;;
+            esac
+            case "/$dir/" in
+                */../*)
+                    echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS entries must not contain '..': '$dir'" >&2
+                    exit 1
+                    ;;
+            esac
+
+            if ! writable_dir=$(realpath -e -- "${CATALINA_HOME}/${dir}" 2>/dev/null) || [ ! -d "$writable_dir" ]; then
+                echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS entry is not an existing directory: '$dir'" >&2
+                exit 1
+            fi
+
+            case "$writable_dir" in
+                "$CATALINA_HOME_REAL")
+                    echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS must not include CATALINA_HOME itself: '$dir'" >&2
+                    exit 1
+                    ;;
+                "$CATALINA_HOME_REAL"/*)
+                    ;;
+                *)
+                    echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS entry resolves outside CATALINA_HOME: '$dir'" >&2
+                    exit 1
+                    ;;
+            esac
+
+            RESOLVED_WRITABLE_DIRS+=("$writable_dir")
+        done
+
+        for writable_dir in "${RESOLVED_WRITABLE_DIRS[@]}"; do
+            chown -R "$USER_ID:$GROUP_ID" "$writable_dir"
+        done
+    fi
+
     exec gosu "$USER_ID" "$@"
 fi
 
