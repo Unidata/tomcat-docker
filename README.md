@@ -1,4 +1,5 @@
 - [Unidata Tomcat Docker](#h-C944C5F1)
+  - [What's New in the Tomcat 11 / JDK 17 Image](#h-FE4514BD)
   - [Introduction](#h-1411CF81)
     - [Security Hardening Measures](#h-6C9EE33A)
       - [Introduction](#h-F5641083)
@@ -12,7 +13,9 @@
   - [Usage](#h-B602CE28)
   - [Configuration](#h-AFA7F4DC)
     - [Configurable Tomcat UID and GID](#h-E4632DC9)
+    - [Additional Writable Directories](#h-2A17C3BD)
     - [HTTPS](#h-D725A36E)
+      - [Certificates](#h-746954E8)
       - [Self-signed Certificates](#h-C24884FC)
       - [Certificate from CA](#h-B5E124BB)
   - [Testing](#h-32889858)
@@ -26,11 +29,30 @@
 A security-hardened Tomcat container for [thredds-docker](https://github.com/Unidata/thredds-docker).
 
 
+<a id="h-FE4514BD"></a>
+
+## What's New in the Tomcat 11 / JDK 17 Image
+
+This release modernizes the image and simplifies its security configuration. If you maintain an image derived from `tomcat-docker`, review the following changes before upgrading:
+
+-   **Tomcat 11 and Java 17:** The image now uses Tomcat 11 with JDK 17. Applications must be compatible with Tomcat 11, including its Jakarta Servlet APIs.
+
+-   **Non-root execution and improved filesystem permissions:** As before, Tomcat runs as an unprivileged user (UID/GID `1000` by default, configurable through `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID`). What's new is that the entrypoint grants the runtime user ownership only of `logs`, `temp`, and `work` by default. Ownership and permissions elsewhere in CATALINA<sub>HOME</sub> are left unchanged. The Tomcat installation, configuration, and deployed applications remain protected from runtime modification (though see next bullet point). If you supply your own versions of `server.xml` and `web.xml` files, bind-mount them read-only (`:ro`).
+
+-   **Additional writable directories for derived images:** Applications that need writable directories beyond the standard Tomcat runtime directories can declare them using `TOMCAT_ADDITIONAL_WRITABLE_DIRS`. Supply whitespace-separated paths relative to `CATALINA_HOME`; the entrypoint recursively assigns ownership to the configured runtime UID/GID at startup. For example, `thredds-docker` sets this variable to `content`. This can also change ownership of files in bind-mounted directories on the host.
+
+-   **Simplified startup:** Tomcat now runs in the foreground with normal container signal handling. The obsolete Tomcat Security Manager configuration has been removed.
+
+-   **Revised default security configuration:** The image enables standard HTTP security headers, suppresses Tomcat-generated error reports in a more modern way, and removes the old global CORS filter. The filter imposed a global policy unnecessarily restricting application-specific configuration. Applications requiring cross-origin access must configure CORS themselves.
+
+-   **Updated TLS configuration:** The documentation now uses Tomcat 11's supported TLS configuration.
+
+
 <a id="h-1411CF81"></a>
 
 ## Introduction
 
-This repository contains files necessary to build and run a security hardened Tomcat Docker container, based off of a canonical [Tomcat base image](https://hub.docker.com/_/tomcat/). The Unidata Tomcat Docker images associated with this repository are [available on Docker Hub](https://hub.docker.com/r/unidata/tomcat-docker/). All default web applications have been expunged from this container so it will primarily serve as a base image for other containers.
+This repository contains files necessary to build and run a security hardened Tomcat Docker container, based off of a canonical [Tomcat base image](https://hub.docker.com/_/tomcat/). The Unidata Tomcat Docker images associated with this repository are [available on DockerHub](https://hub.docker.com/r/unidata/tomcat-docker/). All default web applications have been expunged from this container so it will primarily serve as a base image for other containers.
 
 
 <a id="h-6C9EE33A"></a>
@@ -72,7 +94,7 @@ The following changes have been made to [web.xml](./web.xml) from the out-of-the
 
 The following changes have been made to [server.xml](./server.xml) from the out-of-the-box version:
 
--   Server version information is obscured to user via `server` attribute for all `Connector` elements
+-   The HTTP connector sets the Server response header to Apache, preventing disclosure of the Tomcat version in that header.
 -   Shutdown port disabled
 -   Tomcat-generated error responses omit stack traces, error details, and server information via `ErrorReportValve`. Application-defined error responses must separately avoid exposing sensitive details.
 -   Digested passwords. See next section.
@@ -84,7 +106,7 @@ The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes
 
 #### Digested Passwords
 
-This container configures a `UserDatabaseRealm` in `server.xml` with a `CredentialHandler` using the `sha-512` algorithm. Passwords defined in `tomcat-users.xml` must therefore use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `sha-512` digest algorithm:
+This container configures a `UserDatabaseRealm` in `server.xml` with a `CredentialHandler` using the `sha-512` digest algorithm. Passwords defined in `tomcat-users.xml` must therefore use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `sha-512` digest algorithm:
 
 ```sh
 docker run --rm tomcat:11-jdk17 \
@@ -175,7 +197,7 @@ docker run --name tomcat \
      -e TOMCAT_USER_ID=`id -u` \
      -e TOMCAT_GROUP_ID=`getent group $USER | cut -d':' -f3` \
      -v `pwd`/logs:/usr/local/tomcat/logs/ \
-     -v  /path/to/your/webapp:/usr/local/tomcat/webapps \
+     -v  /path/to/your/webapp:/usr/local/tomcat/webapps:ro \
      -d -p 8080:8080 unidata/tomcat-docker:<version>
 ```
 
@@ -185,20 +207,34 @@ Bind-mounted files must be readable by the configured runtime UID/GID. For examp
 
 This feature enables greater control of file permissions written outside the container via mounted volumes (e.g., files contained within the Tomcat logs directory such as `catalina.out`).
 
-Derived images and applications that need additional runtime state can provide whitespace-separated directories relative to `CATALINA_HOME`:
+Note that containers that inherit this container and override `entrypoint.sh` must arrange the Tomcat runtime UID/GID themselves. The supplied `entrypoint.sh` creates an account when needed or reuses an existing account with the configured UID. On Docker Desktop for macOS, bind-mount ownership and permission behavior differs from native Linux, so matching container UID/GID values may not produce the same host filesystem behavior.
+
+
+<a id="h-2A17C3BD"></a>
+
+### Additional Writable Directories
+
+By default, the Tomcat runtime user owns only `logs`, `temp`, and `work` within `CATALINA_HOME`. Derived images that require additional writable directories in `CATALINA_HOME` can declare them using `TOMCAT_ADDITIONAL_WRITABLE_DIRS`.
+
+For example, `thredds-docker` requires its `content` directory to be writable:
 
 ```Dockerfile
-ENV TOMCAT_ADDITIONAL_WRITABLE_DIRS="content/thredds"
+ENV TOMCAT_ADDITIONAL_WRITABLE_DIRS="content"
 ```
 
-At container startup, each existing directory is recursively assigned to the configured Tomcat runtime UID/GID. The base image itself continues to make only `logs`, `temp`, and `work` writable.
+The variable accepts whitespace-separated directory paths relative to `CATALINA_HOME`. At container startup, the entrypoint recursively changes ownership of these directories to the configured `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID`. Directories must already exist and cannot resolve outside `CATALINA_HOME`.
 
-Note that containers that inherit this container and override `entrypoint.sh` must arrange the Tomcat runtime UID/GID themselves. The supplied `entrypoint.sh` creates an account when needed or reuses an existing account with the configured UID. On Docker Desktop for macOS, bind-mount ownership and permission behavior differs from native Linux, so matching container UID/GID values may not produce the same host filesystem behavior.
+**Important:** If these directories are bind-mounted from the host, their contents will also be recursively `chown`'d. Only declare directories your application actually needs to write to; configuration files, application binaries, and other protected parts of the Tomcat installation should remain read-only to the runtime user.
 
 
 <a id="h-D725A36E"></a>
 
 ### HTTPS
+
+
+<a id="h-746954E8"></a>
+
+#### Certificates
 
 This Tomcat container can support HTTPS for either self-signed certificates which can be useful for experimentation or certificates from a CA for a production server. For a complete treatment on this topic, see <https://tomcat.apache.org/tomcat-11.0-doc/ssl-howto.html>.
 
@@ -292,7 +328,7 @@ Add this connector inside the `Service` element in `server.xml`:
 <Connector port="8443"
            protocol="org.apache.coyote.http11.Http11NioProtocol"
            SSLEnabled="true">
-  <SSLHostConfig protocols="TLSv1.2,TLSv1.3">
+  <SSLHostConfig>
     <Certificate certificateKeystoreFile="${catalina.base}/conf/keystore.p12"
                  certificateKeystoreType="PKCS12"
                  certificateKeyAlias="mydomain.com"
