@@ -1,9 +1,9 @@
 - [Unidata Tomcat Docker](#h-C944C5F1)
+  - [What's New in the Tomcat 11 / JDK 17 Image](#h-FE4514BD)
   - [Introduction](#h-1411CF81)
     - [Security Hardening Measures](#h-6C9EE33A)
       - [Introduction](#h-F5641083)
       - [web.xml Enhancements](#h-76CE835C)
-        - [CORS](#h-6D53D9B2)
       - [server.xml Enhancements](#h-8027E0B0)
       - [Digested Passwords](#h-4CE92D2E)
       - [CVEs](#h-C1DF14EF)
@@ -13,10 +13,11 @@
   - [Usage](#h-B602CE28)
   - [Configuration](#h-AFA7F4DC)
     - [Configurable Tomcat UID and GID](#h-E4632DC9)
+    - [Additional Writable Directories](#h-2A17C3BD)
     - [HTTPS](#h-D725A36E)
+      - [Certificates](#h-746954E8)
       - [Self-signed Certificates](#h-C24884FC)
       - [Certificate from CA](#h-B5E124BB)
-      - [Force HTTPS](#h-787A700F)
   - [Testing](#h-32889858)
 
 
@@ -25,14 +26,33 @@
 
 # Unidata Tomcat Docker
 
-A security-hardened Tomcat container for [thredds-docker](https://github.com/Unidata/thredds-docker) and [ramadda-docker](https://github.com/Unidata/ramadda-docker).
+A security-hardened Tomcat container for [thredds-docker](https://github.com/Unidata/thredds-docker).
+
+
+<a id="h-FE4514BD"></a>
+
+## What's New in the Tomcat 11 / JDK 17 Image
+
+This release modernizes the image and simplifies its security configuration. If you maintain an image derived from `tomcat-docker`, review the following changes before upgrading:
+
+-   **Tomcat 11 and Java 17:** The image now uses Tomcat 11 with JDK 17. Applications must be compatible with Tomcat 11, including its Jakarta Servlet APIs.
+
+-   **Non-root execution and improved filesystem permissions:** As before, Tomcat runs as an unprivileged user (UID/GID `1000` by default, configurable through `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID`). What's new is that the entrypoint grants the runtime user ownership only of `logs`, `temp`, and `work` by default. Ownership and permissions elsewhere in CATALINA<sub>HOME</sub> are left unchanged. The Tomcat installation, configuration, and deployed applications remain protected from runtime modification (though see next bullet point). If you supply your own versions of `server.xml` and `web.xml` files, bind-mount them read-only (`:ro`).
+
+-   **Additional writable directories for derived images:** Applications that need writable directories beyond the standard Tomcat runtime directories can declare them using `TOMCAT_ADDITIONAL_WRITABLE_DIRS`. Supply whitespace-separated paths relative to `CATALINA_HOME`; the entrypoint recursively assigns ownership to the configured runtime UID/GID at startup. For example, `thredds-docker` sets this variable to `content`. This can also change ownership of files in bind-mounted directories on the host.
+
+-   **Simplified startup:** Tomcat now runs in the foreground with normal container signal handling. The obsolete Tomcat Security Manager configuration has been removed.
+
+-   **Revised default security configuration:** The image enables standard HTTP security headers, suppresses Tomcat-generated error reports in a more modern way, and removes the old global CORS filter. The filter imposed a global policy unnecessarily restricting application-specific configuration. Applications requiring cross-origin access must configure CORS themselves.
+
+-   **Updated TLS configuration:** The documentation now uses Tomcat 11's supported TLS configuration.
 
 
 <a id="h-1411CF81"></a>
 
 ## Introduction
 
-This repository contains files necessary to build and run a security hardened Tomcat Docker container, based off of a canonical [Tomcat base image](https://hub.docker.com/_/tomcat/). The Unidata Tomcat Docker images associated with this repository are [available on Docker Hub](https://hub.docker.com/r/unidata/tomcat-docker/). All default web applications have been expunged from this container so it will primarily serve as a base image for other containers.
+This repository contains files necessary to build and run a security hardened Tomcat Docker container, based off of a canonical [Tomcat base image](https://hub.docker.com/_/tomcat/). The Unidata Tomcat Docker images associated with this repository are [available on DockerHub](https://hub.docker.com/r/unidata/tomcat-docker/). All default web applications have been expunged from this container so it will primarily serve as a base image for other containers.
 
 
 <a id="h-6C9EE33A"></a>
@@ -44,14 +64,18 @@ This repository contains files necessary to build and run a security hardened To
 
 #### Introduction
 
-This Tomcat container was security hardened according to [OWASP recommendations](https://www.owasp.org/index.php/Securing_tomcat). Specifically,
+This image includes the security-related configuration changes listed below. Deployment and application security require additional configuration and validation.
 
 -   Eliminated default Tomcat web applications
--   Run Tomcat with unprivileged user `tomcat` (via `entrypoint.sh`)
--   Start Tomcat via Tomcat Security Manager (via `entrypoint.sh`)
--   All files in `CATALINA_HOME` are owned by user `tomcat` (via `entrypoint.sh`)
--   Files in `CATALINA_HOME/conf` are read only (`400`) by user `tomcat` (via `entrypoint.sh`)
--   Container-wide `umask` of `007`
+-   Run Tomcat with an unprivileged runtime UID/GID (via `entrypoint.sh`)
+-   By default, only writable Tomcat runtime directories (`CATALINA_HOME/logs`, `CATALINA_HOME/temp`, and `CATALINA_HOME/work`) are owned by the configured runtime UID/GID. Ownership and permissions elsewhere in `CATALINA_HOME`, including `conf`, `bin`, `lib`, and `webapps`, are left unchanged.
+
+In your runtime configuration, ensure `server.xml` and `web.xml` bind mounts are read-only. This prevents the Tomcat process from modifying configuration files supplied by the host and is a recommended security practice. For example, with Docker Compose:
+
+```yaml
+- ./files/server.xml:/usr/local/tomcat/conf/server.xml:ro
+- ./files/web.xml:/usr/local/tomcat/conf/web.xml:ro
+```
 
 
 <a id="h-76CE835C"></a>
@@ -62,15 +86,6 @@ The following changes have been made to [web.xml](./web.xml) from the out-of-the
 
 -   Added `SAMEORIGIN` anti-clickjacking option
 -   HTTP header security filter (`httpHeaderSecurity`) uncommented/enabled
--   Cross-origin resource sharing (CORS) filtering (`CorsFilter`) added/enabled (see below to disable)
--   Stack traces are not returned to user through `error-page` element.
-
-
-<a id="h-6D53D9B2"></a>
-
-##### CORS
-
-This image enables the [Apache Tomcat CORS filter](https://tomcat.apache.org/tomcat-8.5-doc/config/filter.html#CORS_Filter) by default. To disable it (maybe you want to handle CORS uniformly in a proxying webserver?), set environment variable `DISABLE_CORS` to `1`.
 
 
 <a id="h-8027E0B0"></a>
@@ -79,22 +94,23 @@ This image enables the [Apache Tomcat CORS filter](https://tomcat.apache.org/tom
 
 The following changes have been made to [server.xml](./server.xml) from the out-of-the-box version:
 
--   Server version information is obscured to user via `server` attribute for all `Connector` elements
--   `secure` attribute set to `true` for all `Connector` elements
+-   The HTTP connector sets the Server response header to Apache, preventing disclosure of the Tomcat version in that header.
 -   Shutdown port disabled
+-   Tomcat-generated error responses omit stack traces, error details, and server information via `ErrorReportValve`. Application-defined error responses must separately avoid exposing sensitive details.
 -   Digested passwords. See next section.
 
-The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes. This change may not be optimal for security, but must be done [to accommodate DAP requests](https://github.com/Unidata/thredds-docker/issues/209) which THREDDS and RAMADDA must perform.
+The active `Connector` has `relaxedPathChars` and `relaxedQueryChars` attributes. This change may not be optimal for security, but must be done [to accommodate DAP requests](https://github.com/Unidata/thredds-docker/issues/209) which THREDDS must perform.
 
 
 <a id="h-4CE92D2E"></a>
 
 #### Digested Passwords
 
-This container has a `UserDatabaseRealm`, `Realm` element in `server.xml` with a default `CredentialHandler` `algorithm` of `sha-512`. This modification is an improvement over the clear text password default that comes with the parent container (`tomcat:8.5-jdk11`). Passwords defined in `tomcat-users.xml` must use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `sha-512` digest algorithm:
+This container configures a `UserDatabaseRealm` in `server.xml` with a `CredentialHandler` using the `sha-512` digest algorithm. Passwords defined in `tomcat-users.xml` must therefore use digested passwords in the `password` attributes of the `user` elements. Generating a digested password is simple. Here is an example for the `sha-512` digest algorithm:
 
 ```sh
-docker run tomcat  /usr/local/tomcat/bin/digest.sh -a "sha-512" mysupersecretpassword
+docker run --rm tomcat:11-jdk17 \
+    /usr/local/tomcat/bin/digest.sh -a sha-512 mysupersecretpassword
 ```
 
 This command will yield something like:
@@ -105,7 +121,7 @@ mysupersecretpassword:94e334bc71163a69f2e984e73741f610e083a8e11764ee3e396f6935c3
 
 The hash after the `:` is what you will use for the `password` attribute in `tomcat-users.xml`.
 
-More information about this topic is available in the [Tomcat documentation](https://tomcat.apache.org/tomcat-8.5-doc/realm-howto.html#Digested_Passwords).
+More information about this topic is available in the [Tomcat documentation](https://tomcat.apache.org/tomcat-11.0-doc/realm-howto.html#Digested_Passwords).
 
 
 <a id="h-C1DF14EF"></a>
@@ -153,13 +169,13 @@ Or you can build it yourself with:
 Note that this project is meant to serve as a base image for other containerized Docker Tomcat web applications. Refer to the image created by this project in your Dockerfile. For example:
 
 ```sh
-FROM unidata/tomcat-docker:8.5-jdk11
+FROM unidata/tomcat-docker:<version>
 ```
 
 Sometimes it is useful to enter this container via bash and poke around, just to see what is there. For example,
 
 ```sh
-docker run -it unidata/tomcat-docker:8.5-jdk11 bash
+docker run -it unidata/tomcat-docker:<version> bash
 ```
 
 
@@ -174,80 +190,116 @@ docker run -it unidata/tomcat-docker:8.5-jdk11 bash
 
 The problem with mounted Docker volumes and UID/GID mismatch headaches is best explained here: <https://denibertovic.com/posts/handling-permissions-with-docker-volumes/>.
 
-This container allows the possibility of controlling the UID/GID of the `tomcat` user inside the container via `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` environment variables. If not set, the default UID/GID is `1000/1000`. For example,
+This container allows you to control the Tomcat runtime UID/GID via `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` environment variables. If not set, the default UID/GID is `1000/1000`. For example,
 
 ```sh
 docker run --name tomcat \
      -e TOMCAT_USER_ID=`id -u` \
      -e TOMCAT_GROUP_ID=`getent group $USER | cut -d':' -f3` \
      -v `pwd`/logs:/usr/local/tomcat/logs/ \
-     -v  /path/to/your/webapp:/usr/local/tomcat/webapps \
+     -v  /path/to/your/webapp:/usr/local/tomcat/webapps:ro \
      -d -p 8080:8080 unidata/tomcat-docker:<version>
 ```
 
-where `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` have been configured with the UID/GID of the user running the container. If using `docker-compose`, see `compose.env` to configure the UID/GID of user `tomcat` inside the container.
+where `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID` have been configured with the desired runtime UID/GID. If using `docker compose`, see `compose.env` to configure the Tomcat runtime UID/GID inside the container.
+
+Bind-mounted files must be readable by the configured runtime UID/GID. For example, a TLS private key with mode `0600` must be owned by `TOMCAT_USER_ID`.
 
 This feature enables greater control of file permissions written outside the container via mounted volumes (e.g., files contained within the Tomcat logs directory such as `catalina.out`).
 
-Note that containers that inherit this container and have overridden `entrypoint.sh` will have to take into account user `tomcat` is no longer assumed in the `Dockerfile`. Rather the `tomcat` user is now created within the `entrypoint.sh` and those overriding `entrypoint.sh` should take this fact into account. Also note that this UID/GID configuration option will not work on operating systems where Docker is not native (e.g., macOS).
+Note that containers that inherit this container and override `entrypoint.sh` must arrange the Tomcat runtime UID/GID themselves. The supplied `entrypoint.sh` creates an account when needed or reuses an existing account with the configured UID. On Docker Desktop for macOS, bind-mount ownership and permission behavior differs from native Linux, so matching container UID/GID values may not produce the same host filesystem behavior.
+
+
+<a id="h-2A17C3BD"></a>
+
+### Additional Writable Directories
+
+By default, the Tomcat runtime user owns only `logs`, `temp`, and `work` within `CATALINA_HOME`. Derived images that require additional writable directories in `CATALINA_HOME` can declare them using `TOMCAT_ADDITIONAL_WRITABLE_DIRS`.
+
+For example, `thredds-docker` requires its `content` directory to be writable:
+
+```Dockerfile
+ENV TOMCAT_ADDITIONAL_WRITABLE_DIRS="content"
+```
+
+The variable accepts whitespace-separated directory paths relative to `CATALINA_HOME`. At container startup, the entrypoint recursively changes ownership of these directories to the configured `TOMCAT_USER_ID` and `TOMCAT_GROUP_ID`. Directories must already exist and cannot resolve outside `CATALINA_HOME`.
+
+**Important:** If these directories are bind-mounted from the host, their contents will also be recursively `chown`'d. Only declare directories your application actually needs to write to; configuration files, application binaries, and other protected parts of the Tomcat installation should remain read-only to the runtime user.
 
 
 <a id="h-D725A36E"></a>
 
 ### HTTPS
 
-This Tomcat container can support HTTPS for either self-signed certificates which can be useful for experimentation or certificates from a CA for a production server. For a complete treatment on this topic, see <https://tomcat.apache.org/tomcat-8.5-doc/ssl-howto.html>.
+
+<a id="h-746954E8"></a>
+
+#### Certificates
+
+This Tomcat container can support HTTPS for either self-signed certificates which can be useful for experimentation or certificates from a CA for a production server. For a complete treatment on this topic, see <https://tomcat.apache.org/tomcat-11.0-doc/ssl-howto.html>.
 
 
 <a id="h-C24884FC"></a>
 
 #### Self-signed Certificates
 
-This Tomcat container can support HTTP over SSL. For example, generate a self-signed certificate with `openssl` (or better yet, obtain a real certificate from a certificate authority):
+For local HTTPS testing, generate a 30-day self-signed RSA certificate. This certificate is not intended for production.
 
 ```sh
-openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 -subj \
-    "/C=US/ST=Colorado/L=Boulder/O=Unidata/CN=tomcat.example.com" -keyout \
-    ./ssl.key -out ./ssl.crt
+openssl req -new -newkey rsa:4096 -sha256 -days 30 -nodes -x509 \
+    -subj "/CN=localhost" \
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+    -keyout ./ssl.key -out ./ssl.crt
+chmod 600 ./ssl.key
 ```
 
-Then augment the `server.xml` from this repository with this additional XML snippet for [Tomcat SSL capability](https://tomcat.apache.org/tomcat-8.0-doc/ssl-howto.html):
+The private key must be owned by the Tomcat runtime UID (1000 by default) for the 600 permissions above.
+
+Then augment the `server.xml` from this repository with this additional XML snippet for [Tomcat TLS capability](https://tomcat.apache.org/tomcat-11.0-doc/ssl-howto.html):
 
 ```xml
 <Connector port="8443"
-       maxThreads="150"
-       enableLookups="false"
-       disableUploadTimeout="true"
-       acceptCount="100"
-       scheme="https"
-       secure="true"
-       SSLEnabled="true"
-       SSLCertificateFile="${catalina.base}/conf/ssl.crt"
-       SSLCertificateKeyFile="${catalina.base}/conf/ssl.key" />
+           protocol="org.apache.coyote.http11.Http11NioProtocol"
+           maxThreads="150"
+           enableLookups="false"
+           disableUploadTimeout="true"
+           acceptCount="100"
+           SSLEnabled="true">
+  <SSLHostConfig>
+    <Certificate certificateFile="${catalina.base}/conf/ssl.crt"
+                 certificateKeyFile="${catalina.base}/conf/ssl.key" />
+  </SSLHostConfig>
+</Connector>
 ```
 
-Mount over the existing `server.xml` and add the SSL certificate and private key with:
+Mount the configuration, certificate, and private key read-only. Publish HTTPS on loopback for this local test:
 
 ```sh
-docker run -it -d  -p 80:8080 -p 443:8443 \
-    -v /path/to/server.xml:/usr/local/tomcat/conf/server.xml \
-    -v /path/to/ssl.crt:/usr/local/tomcat/conf/ssl.crt \
-    -v /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key \
-    unidata/tomcat-docker:<version>
+docker run -d -p 127.0.0.1:8443:8443 \
+    -v "$PWD/server.xml:/usr/local/tomcat/conf/server.xml:ro" \
+    -v "$PWD/ssl.crt:/usr/local/tomcat/conf/ssl.crt:ro" \
+    -v "$PWD/ssl.key:/usr/local/tomcat/conf/ssl.key:ro" \
+    tomcat-docker:<version>
 ```
 
-or if using `docker-compose` the `docker-compose.yml` will look like:
+Alternatively, after building the image, use this `docker-compose.yml` with `docker compose up -d`:
 
 ```yaml
-unidata-tomcat:
-  image: unidata/tomcat-docker:<version>
-  ports:
-    - "80:8080"
-    - "443:8443"
-  volumes:
-    - /path/to/ssl.crt:/usr/local/tomcat/conf/ssl.crt
-    - /path/to/ssl.key:/usr/local/tomcat/conf/ssl.key
-    - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
+services:
+  unidata-tomcat:
+    image: tomcat-docker:<version>
+    ports:
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - ./ssl.crt:/usr/local/tomcat/conf/ssl.crt:ro
+      - ./ssl.key:/usr/local/tomcat/conf/ssl.key:ro
+      - ./server.xml:/usr/local/tomcat/conf/server.xml:ro
+```
+
+After Tomcat starts:
+
+```sh
+curl --cacert ./ssl.crt https://localhost:8443/
 ```
 
 
@@ -255,97 +307,50 @@ unidata-tomcat:
 
 #### Certificate from CA
 
-First, obtain a certificate from a certificate authority (CA). This process will yield a `.key` and `.crt` file. To meet enhanced security guidelines you, will want to serve a certificate with the intermediate and root certificates present in the `ssl.crt` file. For Tomcat to serve the certificate chain, you have to put your `.key` and `.crt` (containing the intermediate and root certificates) in a Java keystore. The [Keystore Explorer](https://keystore-explorer.org/) tool is a helpful app to assist you in building a valid certificate chain as well as exploring Java keystores.
+Obtain a server certificate (`ssl.crt`), its private key (`ssl.key`), and any intermediate CA certificates (`intermediates.crt`), in PEM format. Do not include the root CA certificate.
 
-First put the `.key` and `.crt` in a `.p12` file:
+Create a PKCS12 keystore:
 
 ```sh
-openssl pkcs12 -export -in ssl.crt.fullchain -inkey ssl.key -out ssl.p12 -name \
-    mydomain.com
+openssl pkcs12 -export \
+    -in ssl.crt \
+    -inkey ssl.key \
+    -certfile intermediates.crt \
+    -name mydomain.com \
+    -out keystore.p12
 ```
 
-Then add the `.p12` file to the keystore:
+OpenSSL will prompt for the password protecting `keystore.p12`.
 
-```
-keytool -importkeystore -destkeystore keystore.jks -srckeystore ssl.p12 \
-    -srcstoretype PKCS12
-```
-
-When prompted for passwords in the two steps above, consider reusing the same password to reduce cognitive load. If you see the following message
-
-```
-Warning: The JKS keystore uses a proprietary format. It is recommended to
-migrate to PKCS12 which is an industry standard format using "keytool
--importkeystore -srckeystore keystore.jks -destkeystore keystore.jks
--deststoretype pkcs12".
-```
-
-ignore it.
-
-You'll then refer to that keystore in your `server.xml`:
+Add this connector inside the `Service` element in `server.xml`:
 
 ```xml
 <Connector port="8443"
            protocol="org.apache.coyote.http11.Http11NioProtocol"
-           clientAuth="false"
-           sslProtocol="TLSv1.2, TLSv1.3"
-           ciphers="ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ECDHE-ECDSA-AES256-GCM-SHA384,ECDHE-RSA-AES256-GCM-SHA384,ECDHE-ECDSA-CHACHA20-POLY1305,ECDHE-RSA-CHACHA20-POLY1305,DHE-RSA-AES128-GCM-SHA256,DHE-RSA-AES256-GCM-SHA384"
-           maxThreads="150"
-           enableLookups="false"
-           disableUploadTimeout="true"
-           acceptCount="100"
-           scheme="https"
-           secure="true"
-           SSLEnabled="true"
-           keystoreFile="${catalina.base}/conf/keystore.jks"
-           keyAlias="mydomain.com"
-           keystorePass="xxxx"
-           />
+           SSLEnabled="true">
+  <SSLHostConfig>
+    <Certificate certificateKeystoreFile="${catalina.base}/conf/keystore.p12"
+                 certificateKeystoreType="PKCS12"
+                 certificateKeyAlias="mydomain.com"
+                 certificateKeystorePassword="xxxx" />
+  </SSLHostConfig>
+</Connector>
 ```
 
-Note there are a few differences with the `Connector` described for the self-signed certificate above. These additions are made according to enhanced security guidelines.
+Replace `xxxx` with the password entered when creating the keystore.
 
-Mount over the existing `server.xml` and add the SSL certificate and private key with:
+Mount `server.xml` and the keystore read-only, using your locally built `tomcat-docker:<version>` image:
 
 ```sh
-docker run -it -d  -p 80:8080 -p 443:8443 \
-    -v /path/to/server.xml:/usr/local/tomcat/conf/server.xml \
-    -v /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks \
-    unidata/tomcat-docker:<version>
+docker run -d -p 127.0.0.1:8443:8443 \
+    -v "$PWD/server.xml:/usr/local/tomcat/conf/server.xml:ro" \
+    -v "$PWD/keystore.p12:/usr/local/tomcat/conf/keystore.p12:ro" \
+    tomcat-docker:<version>
 ```
 
-or if using `docker-compose` the `docker-compose.yml` will look like:
+The PKCS12 keystore contains the private key, so restrict access to it while ensuring it is readable by the Tomcat runtime user.
 
-```yaml
-unidata-tomcat:
-  image: unidata/tomcat-docker:<version>
-  ports:
-    - "80:8080"
-    - "443:8443"
-  volumes:
-    - /path/to/ssl.jks:/usr/local/tomcat/conf/ssl.jks
-    - /path/to/server.xml:/usr/local/tomcat/conf/server.xml
-```
-
-
-<a id="h-787A700F"></a>
-
-#### Force HTTPS
-
-Once you have your certificates in order, make HTTPS mandatory. Add this snippet as the final element in `web.xml`. Mount over the `web.xml` inside the container with this enhanced `web.xml` in the same manner we have been doing to `server.xml` as discussed herein.
-
-```xml
-<!-- Force HTTPS, required for HTTP redirect! -->
-<security-constraint>
-    <web-resource-collection>
-      <web-resource-name>Protected Context</web-resource-name>
-      <url-pattern>/*</url-pattern>
-    </web-resource-collection>
-    <user-data-constraint>
-      <transport-guarantee>CONFIDENTIAL</transport-guarantee>
-    </user-data-constraint>
-</security-constraint>
-```
+Verify HTTPS after startup. A TLS connector initialization failure does not necessarily terminate Tomcat if another connector can still start.
 
 
 <a id="h-32889858"></a>
@@ -355,18 +360,15 @@ Once you have your certificates in order, make HTTPS mandatory. Add this snippet
 If you would like to do a small test to ensure the Unidata Tomcat Docker image is working:
 
 ```sh
-mkdir -p /tmp/test
-wget -O /tmp/test/sample.war https://tomcat.apache.org/tomcat-8.5-doc/appdev/sample/sample.war
-docker run --name tomcat -e TOMCAT_USER_ID=1000 -e TOMCAT_GROUP_ID=1000 -v /tmp/test/:/usr/local/tomcat/webapps -d -p 8080:8080 unidata/tomcat-docker:<version>
-curl  http://127.0.0.1:8080/sample/index.html
+mkdir -p /tmp/test/ROOT
+echo 'It works' > /tmp/test/ROOT/index.html
+docker run --name tomcat \
+    -e TOMCAT_USER_ID=1000 \
+    -e TOMCAT_GROUP_ID=1000 \
+    -v /tmp/test:/usr/local/tomcat/webapps:ro \
+    -d -p 127.0.0.1:8080:8080 \
+    tomcat-docker:<version>
+curl http://127.0.0.1:8080/
 ```
 
-This should yield some HTML that starts like this:
-
-```html
-<html>
-<head>
-<title>Sample "Hello, World" Application</title>
-</head>
-...
-```
+Expected result: `It works`.
