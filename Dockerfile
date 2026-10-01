@@ -1,16 +1,14 @@
 ###
 # Dockerfile for Unidata Tomcat.
 ###
-FROM tomcat:9.0-jdk11
+FROM tomcat:11-jdk17
 
-MAINTAINER Unidata
+LABEL org.opencontainers.image.authors="UCAR / NSF Unidata"
 
 # Install necessary packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends  \
         gosu \
-        zip \
-        unzip \
         && \
     # Cleanup
     apt-get clean && \
@@ -18,19 +16,7 @@ RUN apt-get update && \
     # Eliminate default web applications
     rm -rf ${CATALINA_HOME}/webapps/* && \
     rm -rf ${CATALINA_HOME}/webapps.dist && \
-    # Obscuring server info
-    cd ${CATALINA_HOME}/lib && \
-    mkdir -p org/apache/catalina/util/ && \
-    unzip -j catalina.jar org/apache/catalina/util/ServerInfo.properties \
-        -d org/apache/catalina/util/ && \
-    sed -i 's/server.info=.*/server.info=Apache Tomcat/g' \
-        org/apache/catalina/util/ServerInfo.properties && \
-    zip -ur catalina.jar \
-        org/apache/catalina/util/ServerInfo.properties && \
-    rm -rf org && cd ${CATALINA_HOME} && \
-    # Setting restrictive umask container-wide
-    echo "session optional pam_umask.so" >> /etc/pam.d/common-session && \
-    sed -i 's/UMASK.*022/UMASK           007/g' /etc/login.defs
+    mkdir -p ${CATALINA_HOME}/conf/Catalina/localhost
 
 # Security enhanced web.xml
 COPY web.xml ${CATALINA_HOME}/conf/

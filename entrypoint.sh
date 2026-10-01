@@ -1,9 +1,7 @@
 #!/bin/bash
 set -e
 
-# preferable to fire up Tomcat via start-tomcat.sh which will start Tomcat with
-# security manager, but inheriting containers can also start Tomcat via
-# catalina.sh
+# Start Tomcat via start-tomcat.sh; inheriting containers can also use catalina.sh.
 
 if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
 
@@ -28,36 +26,79 @@ if [ "$1" = 'start-tomcat.sh' ] || [ "$1" = 'catalina.sh' ]; then
     ###
     # Tomcat user
     ###
-    # create group for GROUP_ID if one doesn't already exist
-    if ! getent group $GROUP_ID &> /dev/null; then
-      groupadd -r tomcat -g $GROUP_ID
-    fi
-    # create user for USER_ID if one doesn't already exist
-    if ! getent passwd $USER_ID &> /dev/null; then
-      useradd -u $USER_ID -g $GROUP_ID tomcat
-    fi
-    # alter USER_ID with nologin shell and CATALINA_HOME home directory
-    usermod -d "${CATALINA_HOME}" -s /sbin/nologin $(id -u -n $USER_ID)
-
-    ###
-    # Change CATALINA_HOME ownership to tomcat user and tomcat group
-    # Restrict permissions on conf
-    ###
-
-    chown -R $USER_ID:$GROUP_ID ${CATALINA_HOME} && find ${CATALINA_HOME}/conf \
-        -type d -exec chmod 755 {} \; -o -type f -exec chmod 400 {} \;
-
-    ###
-    # Deactivate CORS filter in web.xml if DISABLE_CORS=1
-    # Useful if CORS is handled outside of Tomcat (e.g. in a proxying webserver like nginx)
-    ###
-    if [ "$DISABLE_CORS" == "1" ]; then
-      echo "Deactivating Tomcat CORS filter"
-      sed -i 's/<!-- CORS_START.*/<!-- CORS DEACTIVATED BY DISABLE_CORS -->\n<!--/; s/^.*<!-- CORS_END -->/-->/' \
-        ${CATALINA_HOME}/conf/web.xml
+    # Create group for GROUP_ID if one doesn't already exist.
+    if ! getent group "$GROUP_ID" &> /dev/null; then
+        groupadd -r tomcat -g "$GROUP_ID"
     fi
 
-    exec gosu $USER_ID "$@"
+    # Create user for USER_ID if one doesn't already exist.
+    if ! getent passwd "$USER_ID" &> /dev/null; then
+        useradd \
+            -u "$USER_ID" \
+            -g "$GROUP_ID" \
+            -d "$CATALINA_HOME" \
+            -s /sbin/nologin \
+            tomcat
+    else
+        # Ensure an existing UID uses the requested primary group.
+        usermod -g "$GROUP_ID" "$(id -u -n "$USER_ID")"
+    fi
+
+    # Give the Tomcat runtime user ownership only of standard writable directories.
+    # Do not change ownership or permissions elsewhere in CATALINA_HOME.
+    for dir in logs temp work; do
+        if [ -d "${CATALINA_HOME}/${dir}" ]; then
+            chown -R "$USER_ID:$GROUP_ID" "${CATALINA_HOME}/${dir}"
+        fi
+    done
+
+    # Give derived images ownership of explicitly declared runtime directories.
+    if [ -n "${TOMCAT_ADDITIONAL_WRITABLE_DIRS:-}" ]; then
+        CATALINA_HOME_REAL=$(realpath -e -- "$CATALINA_HOME")
+        read -r -a ADDITIONAL_WRITABLE_DIRS <<< "$TOMCAT_ADDITIONAL_WRITABLE_DIRS"
+        RESOLVED_WRITABLE_DIRS=()
+
+        for dir in "${ADDITIONAL_WRITABLE_DIRS[@]}"; do
+            case "$dir" in
+                /*)
+                    echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS entries must be relative: '$dir'" >&2
+                    exit 1
+                    ;;
+            esac
+            case "/$dir/" in
+                */../*)
+                    echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS entries must not contain '..': '$dir'" >&2
+                    exit 1
+                    ;;
+            esac
+
+            if ! writable_dir=$(realpath -e -- "${CATALINA_HOME}/${dir}" 2>/dev/null) || [ ! -d "$writable_dir" ]; then
+                echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS entry is not an existing directory: '$dir'" >&2
+                exit 1
+            fi
+
+            case "$writable_dir" in
+                "$CATALINA_HOME_REAL")
+                    echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS must not include CATALINA_HOME itself: '$dir'" >&2
+                    exit 1
+                    ;;
+                "$CATALINA_HOME_REAL"/*)
+                    ;;
+                *)
+                    echo "ERROR: TOMCAT_ADDITIONAL_WRITABLE_DIRS entry resolves outside CATALINA_HOME: '$dir'" >&2
+                    exit 1
+                    ;;
+            esac
+
+            RESOLVED_WRITABLE_DIRS+=("$writable_dir")
+        done
+
+        for writable_dir in "${RESOLVED_WRITABLE_DIRS[@]}"; do
+            chown -R "$USER_ID:$GROUP_ID" "$writable_dir"
+        done
+    fi
+
+    exec gosu "$USER_ID" "$@"
 fi
 
 exec "$@"
