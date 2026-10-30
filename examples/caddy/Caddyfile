@@ -1,0 +1,3 @@
+{$DOMAIN} {
+	reverse_proxy tomcat:8080
+}

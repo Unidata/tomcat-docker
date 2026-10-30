@@ -19,6 +19,7 @@
       - [Self-signed Certificates](#h-C24884FC)
       - [Certificate from a CA](#h-B5E124BB)
       - [Configure Tomcat](#h-11D151F3)
+      - [Automatic HTTPS with Caddy](#h-da21f04c)
   - [Testing](#h-32889858)
 
 
@@ -355,6 +356,48 @@ curl --cacert ./localhost.crt https://localhost:8443/
 ```
 
 A TLS connector initialization failure does not necessarily terminate Tomcat if another connector can still start. Check the container logs if the HTTPS endpoint is unavailable.
+
+
+<a id="h-da21f04c"></a>
+
+#### Automatic HTTPS with Caddy
+
+For an alternative to configuring TLS in Tomcat, the optional example in [`examples/caddy`](examples/caddy) uses Caddy as a reverse proxy. Caddy listens on ports 80 and 443, obtains and renews the certificate automatically, and forwards requests to Tomcat over the private Compose network. The Tomcat port is not published on the host.
+
+Before starting the example:
+
+1.  Build this project's image as `tomcat-docker:11-jdk17`.
+2.  Point a public DNS record for the hostname at the Docker host.
+3.  Allow inbound TCP traffic on ports 80 and 443.
+
+Then run, replacing the example hostname with the real public hostname:
+
+```sh
+docker build -t tomcat-docker:11-jdk17 .
+DOMAIN=tomcat.example.test docker compose -f examples/caddy/compose.yaml up -d
+```
+
+Caddy stores its ACME account and certificates in the named `caddy_data` volume; do not remove that volume during routine container upgrades. Caddy handles certificate renewal and reloads renewed certificates without requiring changes to the Tomcat container.
+
+The proxy supplies standard forwarded headers. Applications that use the original client address or scheme must configure Tomcat to accept those headers from trusted proxies. Add a `RemoteIpValve` inside the `Host` element in `server.xml`:
+
+```xml
+<Valve className="org.apache.catalina.valves.RemoteIpValve"
+       remoteIpHeader="x-forwarded-for"
+       protocolHeader="x-forwarded-proto" />
+```
+
+The default image already contains this project's `server.xml` and `web.xml`, so the example does not mount separate copies. No proxy-specific change to `web.xml` is required. A derived deployment that supplies either file can mount it read-only:
+
+```yaml
+services:
+  tomcat:
+    volumes:
+      - ./server.xml:/usr/local/tomcat/conf/server.xml:ro
+      - ./web.xml:/usr/local/tomcat/conf/web.xml:ro
+```
+
+Only trust forwarded headers when Tomcat is isolated behind the proxy. Do not publish Tomcat's port when relying on Caddy as the public entry point.
 
 
 <a id="h-32889858"></a>
