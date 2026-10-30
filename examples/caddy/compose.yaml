@@ -1,0 +1,25 @@
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN to the public hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - tomcat
+
+  tomcat:
+    image: tomcat-docker:11-jdk17
+    restart: unless-stopped
+    expose:
+      - "8080"
+
+volumes:
+  caddy_data:
+  caddy_config:
